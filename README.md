@@ -10,8 +10,8 @@ Extracting all the human annotated terms for annotation category:
 * Metastatic Stage. 
 
 Parsing through the extracted human annotated terms for each category
--Extract words in ()
--Remove and,/,or,-,a,n,K,3,-1,-2,""
+* Extract words in ()
+* Remove and,/,or,-,a,n,K,3,-1,-2,""
 
 Match extracted terms to grant abstract and title
 
@@ -24,10 +24,10 @@ library(tm)
 library(RTextTools)
 ```
 Create document term matrix and normalize grants:
--stem words
--remove numbers
--remove punctuation
--remove sparse terms
--remove stop words
+* stem words
+* remove numbers
+* remove punctuation
+* remove sparse terms
+* remove stop words
 
 Try [RTextTools](http://journal.r-project.org/archive/2013-1/collingwood-jurka-boydstun-etal.pdf) algorithms with "pathway" annotation
