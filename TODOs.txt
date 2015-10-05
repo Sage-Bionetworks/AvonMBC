@@ -1,0 +1,21 @@
+##To Do
+
+Sep 21.
+-Training new grants from existing old grants (supervised learning)
+
+-Use existing annotations and match terms: terms that appear in the grant must be a certain topic... (most rudimentary) 
+
+-what is the input feature, and what is the output
+
+-Have a dictionary, add the already annotated to this dictionary, then build upon this dictionary slowly.  
+    -target foo:  terms associated with target foo
+    -pathway foo : terms associated with pathway foo 
+
+
+Oct 5.
+- Normalize annotations, and grants then try matching script again
+- Boolean categorization of whether an annotation exists or not, then map specific annotation term to the grant (ie, pathway exists or is NA)
+	-Need to see decide which algorithm to use to do the boolean classification 
+- See how many annotations are labeled as multiple or have multiple
+- Email Lynn for more data and ask what the "n/a","-", "other","not specified mean"
+
