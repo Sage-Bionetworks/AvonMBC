@@ -3,11 +3,11 @@
 **Matching_annotations.R**
 
 Extracting all the human annotated terms for annotation category: 
-*Pathway 
-*Pathway Group
-*Molecular Target
-*Molecular Target Group
-*Metastatic Stage. 
+* Pathway 
+* Pathway Group
+* Molecular Target
+* Molecular Target Group
+* Metastatic Stage. 
 
 Parsing through the extracted human annotated terms for each category
 -Extract words in ()
