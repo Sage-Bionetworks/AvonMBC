@@ -1,7 +1,6 @@
 library(tm)
-install.packages("RTextTools")
 library(RTextTools)
-grantInfo$Pathway
+
 grantInfo<-read.csv("metastatic_grant_binary.csv",stringsAsFactors=F)
 #Normalize Data
 doc_matrix <- create_matrix(grantInfo$TechAbstract, language="english",

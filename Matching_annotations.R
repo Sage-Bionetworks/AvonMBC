@@ -1,5 +1,6 @@
 library(rjson)
 library(stringr)
+
 #--------------------------------------------------------
 #get Specific annotation
 #--------------------------------------------------------
@@ -162,3 +163,35 @@ getvalues <- function(compare) {
   print(paste("accuracy without NA:",mean(temp>0),sep=" "))
 }
 
+#---------------------------------------------------------
+# Normalize data then do workflow
+#---------------------------------------------------------
+library(tm)
+library(RTextTools)
+source("textmining_functions.R")
+
+
+textVec <- as.vector(grantInfo$TechAbstract)
+textVec <- toAmericanEnglish(textVec)
+
+
+textVec <- tolower(strip.markup(textVec))
+corpusraw <- Corpus(VectorSource(textVec)) 
+
+funs <- list(stripWhitespace,
+             concatenate_and_split_hyphens,
+             skipWords,
+             removePunctuation,
+             removeNumbers,
+             stemDocument)
+
+corpus <- tm_map(corpusraw, FUN = tm_reduce, tmFuns = funs)
+
+####Added this line to avoid error######
+corpus <- tm_map(corpus, PlainTextDocument)
+
+temp<- as.matrix(corpus)
+
+
+dataframe<-data.frame(text=unlist(sapply(corpus, `[`, "content")), 
+                      stringsAsFactors=F)
