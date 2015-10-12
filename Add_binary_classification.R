@@ -18,7 +18,7 @@ create_binary <- function(needed,group) {
                lower == "n/a (imaging of mets)"| lower == "n/a (imaging)" | 
                lower =="n/a (imaging of mets) & imaging herceptin delivery"|
                lower == "n/a (therapy delivery system)" | lower == "n/a surgery"| 
-               lower == "none"| temp =="not applicable" | 
+               lower == "none"| lower =="not applicable" | 
                lower == "0_no specific target")] <- 0
   temp[which(temp!=0)]<-1
   #Must have global variable (needed)
