@@ -78,6 +78,11 @@ compare <- function(human_annote, machine_annote,folder,noNA) {
     temp <- fromJSON(file=sprintf("dataexample/%s/%d.json",folder,x))
     machine<-unlist(temp[sprintf("%s",machine_annote)],use.names=F)
     human <- unlist(temp[sprintf("%s",human_annote)],use.names=F)
+    if (folder == "Norm_json") {
+      human <- as.vector(human)
+      human <- normalise_text(human)
+      human <- unlist(unique(human),use.names = F)
+    }
     toms<- unlist(strsplit(machine,","))
     num<-sapply(toms, function(y) {
       grep(sprintf("\\b%s\\b",y),human,ignore.case =T)
