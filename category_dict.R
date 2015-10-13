@@ -11,3 +11,6 @@ mt_excel$Molecular.Target..Group.
 
 write.csv(pathways,"dictionary/KW.csv",row.names = F)
 read.csv("dictionary/pathway_dict.csv")
+
+pw_checked<- read.csv("dictionary/pw_dict_check.csv")
+write.csv(factor(pw_checked$x[!duplicated(tolower(pw_checked$x))]),"dictionary/pw_dict_check.csv",row.names = F)
