@@ -79,6 +79,8 @@ getvalues(mtgroup_compare)
 getvalues(mt_compare)
 getvalues(metastage_compare)
 
+
+
 #---------------------------------------------------------
 # Normalize data then do workflow
 #---------------------------------------------------------
@@ -100,9 +102,10 @@ norm_mtgroup <- normalise_text(mtgroup)
 norm_mt <- normalise_text(mt)
 norm_meta <- normalise_text(meta)
 
-#Process normalised annotation lists
-list_norm_pw <- trim(unlist(unique(norm_Pathway),use.names = F))
-list_norm_pw<- list_norm_pw[list_norm_pw != ""]
+
+
+#Processed normalised annotation lists
+list_norm_pw<- read.csv('dictionary/pw_dict_normed.csv')
 
 list_norm_pwgroup <- trim(unlist(unique(norm_pwgroup),use.names = F))
 list_norm_pwgroup <- list_norm_pwgroup[list_norm_pwgroup!=""]
@@ -117,23 +120,23 @@ list_norm_meta <- trim(unlist(unique(norm_meta),use.names = F))
 list_norm_meta <- list_norm_meta[list_norm_meta!=""]
 
 #Match keyterms
-norm_pw_match <- matching_keyterms(norm_mainData,list_norm_pw,T)
+norm_pw_match <- matching_keyterms(norm_mainData,levels(list_norm_pw$x),T)
+#Pw group and molecular target group can map to pathway/molecular target
 norm_pwgroup_match <- matching_keyterms(norm_mainData,list_norm_pwgroup,T)
 norm_mt_match <- matching_keyterms(norm_mainData,list_norm_mt,T)
 norm_mtgroup_match <- matching_keyterms(norm_mainData, list_norm_mtgroup,T)
 norm_meta_match <- matching_keyterms(norm_mainData, list_norm_meta,T)
 
 
-
 ### Normalized add to JSON
 addition<-sapply(c(1:2237), function(x) {
   temp <- fromJSON(file=sprintf("dataexample/json/%d.json",x))
   temp$match_pathway = paste0(norm_pw_match[[x]],collapse = ",")
-  temp$match_pwgroup = paste0(norm_pwgroup_match[[x]],collapse = ",")
-  temp$match_mts = paste0(norm_mt_match[[x]],collapse = ",")
-  temp$match_mtgroups = paste0(norm_mtgroup_match[[x]],collapse = ",")
-  temp$match_metastage = paste0(norm_meta_match[[x]],collapse = ",")
-  sink(sprintf("dataexample/Norm_json/%d.json",x))
+  #temp$match_pwgroup = paste0(norm_pwgroup_match[[x]],collapse = ",")
+  #temp$match_mts = paste0(norm_mt_match[[x]],collapse = ",")
+  #temp$match_mtgroups = paste0(norm_mtgroup_match[[x]],collapse = ",")
+  #temp$match_metastage = paste0(norm_meta_match[[x]],collapse = ",")
+  sink(sprintf("dataexample/Norm_json/%dpw.json",x))
   cat(toJSON(temp))
   sink()
 })
