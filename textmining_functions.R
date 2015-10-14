@@ -1,3 +1,5 @@
+library(tm)
+
 skipWords <- function(x) removeWords(x, c(stopwords('english')))
 #"abil","across","releas","accompani","chang","surprisingly",
 #"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
