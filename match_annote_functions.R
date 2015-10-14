@@ -75,22 +75,27 @@ matching_keyterms <- function(grantInfo,list_annotes,normalized) {
 #--------------------------------------
 compare <- function(human_annote, machine_annote,folder,noNA) {
   accuracy<-lapply(c(1:2237), function(x) {
-    temp <- fromJSON(file=sprintf("dataexample/%s/%d.json",folder,x))
+    temp <- fromJSON(file=sprintf("dataexample/%s/%dpw.json",folder,x))
     machine<-unlist(temp[sprintf("%s",machine_annote)],use.names=F)
     human <- unlist(temp[sprintf("%s",human_annote)],use.names=F)
+    lower <- tolower(human)
     if (folder == "Norm_json") {
+      human <- gsub("/"," ",human)
+      human <- gsub(";"," ",human)
       human <- as.vector(human)
       human <- normalise_text(human)
       human <- unlist(unique(human),use.names = F)
     }
+    #print(human)
     toms<- unlist(strsplit(machine,","))
     num<-sapply(toms, function(y) {
       grep(sprintf("\\b%s\\b",y),human,ignore.case =T)
     })
-    lower <- tolower(human)
+    
     if (noNA) {
       if (is.null(human)) {
         return(0.5)
+        #Remove multiple as, it would be silly to match against the term "multiple"
       } else if (human == "-" || lower =="not specified" || lower == "n/a"  ||
                  lower == "other/not specified" || lower == "not relevant" ||
                  lower == "no abstract" || lower == "n/a (chemo delivery system)" || 
@@ -98,11 +103,11 @@ compare <- function(human_annote, machine_annote,folder,noNA) {
                  lower =="n/a (imaging of mets) & imaging herceptin delivery"||
                  lower == "n/a (therapy delivery system)" || lower == "n/a surgery"|| 
                  lower == "none"|| lower =="not applicable" || 
-                 lower == "0_no specific target") {
+                 lower == "0_no specific target" || human =="") {
         return(0.5)
-      } #else {
-        #return(sum(unlist(num)))
-      #}
+      } else if (lower=="multiple" || lower == "other") {
+        return(-1)
+      }
     } 
     return(sum(unlist(num)))
   })
@@ -117,6 +122,7 @@ compare <- function(human_annote, machine_annote,folder,noNA) {
 getvalues <- function(compare) {
   print(paste("accuracy with NA:",mean(compare>0.5),sep=" "))
   print(paste("# NA:",sum(compare==0.5),sep=" "))
-  temp<-compare[compare!=0.5]
+  print(paste("# Multiple/Other:",sum(compare==-1),sep=" "))
+  temp<-compare[compare!=0.5 && compare != -1]
   print(paste("accuracy without NA:",mean(temp>0),sep=" "))
 }
