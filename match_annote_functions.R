@@ -50,22 +50,27 @@ annote_extract <- function(annote) {
 #---------------------------------------
 #Match top 5 key terms
 #--------------------------------------
-matching_keyterms <- function(grantInfo,list_annotes,normalized) {
-  if (!normalized) { 
-    grants <- paste(grantInfo$TechAbstract,grantInfo$AwardTitle,sep=",")
-  } else {
-    grants <- grantInfo
+matching_keyterms <- function(grantInfo,annotes,normalized=T,removeNumbers=F) {
+  grants <- paste(grantInfo$TechAbstract,grantInfo$AwardTitle,sep=",")
+  if (normalized) { 
+    grants <- normalise_text(grants,removeNumbers)
+    list_annotes <- normalise_text(annotes,removeNumbers)
+    #HER, NO, and AM are removed, but these are important
+    list_annotes$abstracts[77] <- "her"
+    list_annotes$abstracts[207] <- "no"
+    list_annotes$abstracts[528] <- "am"
   }
   keyterms<- apply(as.matrix(grants),1, function(x) {
-    words <- sapply(list_annotes, function(y) {
+    words <- sapply(list_annotes$abstracts, function(y) {
       #coll searches for just the word
       return(str_count(x,sprintf("\\b%s\\b",y)))
     })
-    if (normalized) {
-      return(names(words[words>0]))
-    } else {
-      return(names(sort(words[words>0],decreasing = T)[1:5]))
-    }
+    #if (normalized) {
+    #return(annotes[words>0])
+    return(names(words[words>0]))
+    #} #else {
+      #return(names(sort(words[words>0],decreasing = T)[1:5]))
+    #}
   })
   return(keyterms)
 }
@@ -73,7 +78,7 @@ matching_keyterms <- function(grantInfo,list_annotes,normalized) {
 #--------------------------------------
 #Compare keyterms with human annotated
 #--------------------------------------
-compare <- function(human_annote, machine_annote,folder,noNA) {
+compare <- function(human_annote, machine_annote,folder,noNA,removeNumbers=T) {
   accuracy<-lapply(c(1:2237), function(x) {
     temp <- fromJSON(file=sprintf("dataexample/%s/%dpw.json",folder,x))
     machine<-unlist(temp[sprintf("%s",machine_annote)],use.names=F)
@@ -83,7 +88,7 @@ compare <- function(human_annote, machine_annote,folder,noNA) {
       human <- gsub("/"," ",human)
       human <- gsub(";"," ",human)
       human <- as.vector(human)
-      human <- normalise_text(human)
+      human <- normalise_text(human,removeNumbers)
       human <- unlist(unique(human),use.names = F)
     }
     #print(human)

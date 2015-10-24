@@ -84,57 +84,53 @@ getvalues(metastage_compare)
 #---------------------------------------------------------
 # Normalize data then do workflow
 #---------------------------------------------------------
+grantInfo <- read.csv("Metastatic_grant.csv",stringsAsFactors = F)
+
 mainData <- as.vector(paste(grantInfo$AwardTitle,grantInfo$TechAbstract))
 mainData <- toAmericanEnglish(mainData)
 norm_mainData <- normalise_text(mainData)
 
-#Vectorize annotation categories
-Pathway <- as.vector(grantInfo$Pathway)
-mt <- as.vector(grantInfo$Molecular.Target)
-pwgroup <- as.vector(grantInfo$Pathway..Group.)
-mtgroup <- as.vector(grantInfo$Molecular.Target..Group.)
-meta <- as.vector(grantInfo$X.Metastasis.stage)
+norm_mainData$abstracts[1]
+
+pw_pwgroup_mapped <- read.csv("dictionary/pw_pwgroup_mapping.csv",stringsAsFactors = F)
 
 #Normalize human annotated categories
-norm_Pathway <- normalise_text(Pathway)
-norm_pwgroup <- normalise_text(pwgroup)
-norm_mtgroup <- normalise_text(mtgroup)
-norm_mt <- normalise_text(mt)
-norm_meta <- normalise_text(meta)
+norm_pw <- normalise_text(pw_pwgroup_mapped[,1],F)
+norm_mainData <- normalise_text(grantInfo$TechAbstract,F)
 
-
+#Matching keyterms has normalize parameter (default = True), Input original grantInfo 
+#along with pw_pwgroup mapped
+norm_pw_match<- matching_keyterms(grantInfo,pw_pwgroup_mapped[,1],removeNumbers = T)
 
 #Processed normalised annotation lists
 list_norm_pw<- read.csv('dictionary/pw_dict_normed.csv')
-
-list_norm_pwgroup <- trim(unlist(unique(norm_pwgroup),use.names = F))
-list_norm_pwgroup <- list_norm_pwgroup[list_norm_pwgroup!=""]
+#Will match the pathway group to the matched pathway, no need to match pathway group to text
+#Build on the dictionary.. Correlation between molecular target and pathway... then molecular target
+#group can be matched with molecular target
 
 list_norm_mt <- trim(unlist(unique(norm_mt),use.names = F))
 list_norm_mt <- list_norm_mt[list_norm_mt!=""]
 
-list_norm_mtgroup <- trim(unlist(unique(norm_mtgroup),use.names = F))
-list_norm_mtgroup <- list_norm_mtgroup[list_norm_mtgroup!=""]
-
 list_norm_meta <- trim(unlist(unique(norm_meta),use.names = F))
 list_norm_meta <- list_norm_meta[list_norm_meta!=""]
 
+
 #Match keyterms
-norm_pw_match <- matching_keyterms(norm_mainData,levels(list_norm_pw$x),T)
+norm_pw_match <- matching_keyterms(grantInfo,pw_pwgroup_mapped[,1],removeNumbers = F)
 #Pw group and molecular target group can map to pathway/molecular target
-norm_pwgroup_match <- matching_keyterms(norm_mainData,list_norm_pwgroup,T)
-norm_mt_match <- matching_keyterms(norm_mainData,list_norm_mt,T)
-norm_mtgroup_match <- matching_keyterms(norm_mainData, list_norm_mtgroup,T)
-norm_meta_match <- matching_keyterms(norm_mainData, list_norm_meta,T)
+norm_pwgroup_match <- matching_keyterms(grantInfo,list_norm_pwgroup,T)
+norm_mt_match <- matching_keyterms(grantInfo,list_norm_mt,T)
+norm_mtgroup_match <- matching_keyterms(grantInfo, list_norm_mtgroup,T)
+norm_meta_match <- matching_keyterms(grantInfo, list_norm_meta,T)
 
 
 ### Normalized add to JSON
 addition<-sapply(c(1:2237), function(x) {
   temp <- fromJSON(file=sprintf("dataexample/json/%d.json",x))
-  temp$match_pathway = paste0(norm_pw_match[[x]],collapse = ",")
+  temp$match_pathway = paste0(norm_pw_match[[x]],collapse = ", ")
   #temp$match_pwgroup = paste0(norm_pwgroup_match[[x]],collapse = ",")
   #temp$match_mts = paste0(norm_mt_match[[x]],collapse = ",")
-  #temp$match_mtgroups = paste0(norm_mtgroup_match[[x]],collapse = ",")
+  #temp$match_mtgroups = paste0(norm_smtgroup_match[[x]],collapse = ",")
   #temp$match_metastage = paste0(norm_meta_match[[x]],collapse = ",")
   sink(sprintf("dataexample/Norm_json/%dpw.json",x))
   cat(toJSON(temp))
@@ -143,11 +139,13 @@ addition<-sapply(c(1:2237), function(x) {
 
 
 #COMPARE
-pwn_compare <- compare("Pathway","match_pathway","Norm_json",T)
+pwn_compare <- compare("Pathway","match_pathway","Norm_json",T,removeNumbers = T)
 pwgroupn_compare<-compare("Pathway (Group)","match_pwgroup","Norm_json",T)
 mtgroupn_compare<-compare("Molecular Target (Group)","match_mtgroups","Norm_json",T)
 mtn_compare<-compare("Molecular Target","match_mts","Norm_json",T)
 metastagen_compare<-compare("*Metastasis stage","match_metastage","Norm_json",T)
+
+
 
 getvalues(pwn_compare)
 getvalues(pwgroupn_compare)
