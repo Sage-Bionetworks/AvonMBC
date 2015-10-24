@@ -12,7 +12,6 @@ skipWords <- function(x) removeWords(x, c(stopwords('english')))
 #"comprehens","discov","side","within","global","construct","depend","aberr",
 #"accord","safeti","abund","administr","combin","angiogenesi","best","acquir",
 #"activ","allow","specif"))
-
 concatenate_and_split_hyphens <- function(x){gsub("\\s(\\w+)-(\\w+)\\s"," \\1\\2 \\1 \\2 ",x)}
 removeAloneNumbers <- function(x){gsub("\\s\\d+\\s","", x)}
 replace.greek <- function(x){
@@ -30,16 +29,24 @@ cleanFun <- function(htmlString) {
   return(gsub("<.*?>", "", htmlString))
 }
 
-normalise_text <- function(textVec) {
+normalise_text <- function(textVec,removenumbers=T) {
   textVec <- tolower(strip.markup(textVec))
   corpusraw <- Corpus(VectorSource(textVec)) 
   
-  funs <- list(stripWhitespace,
-               concatenate_and_split_hyphens,
-               skipWords,
-               removePunctuation,
-               removeNumbers,
-               stemDocument)
+  if (removenumbers) {
+    funs <- list(stripWhitespace,
+                 concatenate_and_split_hyphens,
+                 skipWords,
+                 removePunctuation,
+                 removeNumbers,
+                 stemDocument)
+  } else {
+    funs <- list(stripWhitespace,
+                 concatenate_and_split_hyphens,
+                 skipWords,
+                 removePunctuation,
+                 stemDocument)
+  }
   #normalize
   corpus <- tm_map(corpusraw, FUN = tm_reduce, tmFuns = funs)
   
