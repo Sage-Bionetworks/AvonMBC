@@ -69,7 +69,6 @@ function mbc_dash(file) {
             information += '<p>'+'<b>&nbspdb_pw</b>: '+dat['db_pw']+ '</p>'
             information += '<p>'+'<b>&nbspdb_pwgene</b>: '+dat['db_pwgene']+ '</p>'
             information += '<p>'+'<b>&nbspMatched_pathways</b>: '+dat['match_pathway']+ '</p>'
-            information += '<p>'+'<b>&nbspMatched_pathways</b>: '+dat['match_pathway']+ '</p>'
             information += '<p>'+'<b>&nbspMatch_pwgroup</b>: '+dat['match_pwgroup']+ '</p>'
             information += '<p>'+'<b>&nbspMatch_mts</b>: '+dat['match_mts']+ '</p>'
             information += '<p>'+'<b>&nbspMatch_mtgroups</b>: '+dat['match_mtgroups']+ '</p>'
