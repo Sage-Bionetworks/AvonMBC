@@ -103,15 +103,15 @@ predictions = svc.predict(features_array[1501:2236])
 numpy.mean(predictions == grantInfo['pw_binary'][1501:2236])
 
 
-#-----------------
+#----------------------------------------------------------------------
 # Classification of text documents using sparse features
-#-----------------
+#----------------------------------------------------------------------
 vectorizer = TfidfVectorizer(sublinear_tf=True, max_df=0.5,
                                  stop_words='english')
 X_train = vectorizer.fit_transform(train_data)
 X_test = vectorizer.transform(test_data)
 #chi2
-ch2 = SelectKBest(chi2, k=15863)
+ch2 = SelectKBest(chi2, k=2)
 X_train = ch2.fit_transform(X_train, train_result)
 X_test = ch2.transform(X_test)
 
@@ -132,7 +132,6 @@ for penalty in ["l2", "l1"]:
     # Train Liblinear model
     results.append(benchmark(LinearSVC(loss='l2', penalty=penalty,
                                             dual=False, tol=1e-3)))
-
     # Train SGD model
     results.append(benchmark(SGDClassifier(alpha=.0001, n_iter=50,
                                            penalty=penalty)))
@@ -206,9 +205,9 @@ for i in total_complete:
 #searching for the word
 #text.concordance('HPR1')
 
-#--------
+#----------------------------------------------------------------------
 # BENCHMARK
-#-------
+#----------------------------------------------------------------------
 feature_names=None
 def benchmark(clf):
     print('_' * 80)
@@ -235,9 +234,13 @@ def benchmark(clf):
     clf_descr = str(clf).split('(')[0]
     return clf_descr, score, train_time, test_time
 
+def show_top10(classifier, vectorizer, categories):
+    feature_names = np.asarray(vectorizer.get_feature_names())
+    for i, category in enumerate(categories):
+        top10 = np.argsort(classifier.coef_[i])[-10:]
+        print("%s: %s" % (category, " ".join(feature_names[top10])))
 
-
-#-----
+#----------------------------------------------------------------------
 # semi feature selection
 	# Lasso (give this a try)
 # How to generate features
@@ -246,5 +249,4 @@ def benchmark(clf):
 	#No clusters on PCA then shit out of luck
 #Different categories mean 
 #Linear discriminant analysis
-
-#----
+#----------------------------------------------------------------------
