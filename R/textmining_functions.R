@@ -29,23 +29,19 @@ cleanFun <- function(htmlString) {
   return(gsub("<.*?>", "", htmlString))
 }
 
-normalise_text <- function(textVec,removenumbers=T) {
+normalise_text <- function(textVec,removenumbers=T,stemDoc=T) {
+  #Must be a textVector that is passed in
   textVec <- tolower(strip.markup(textVec))
   corpusraw <- Corpus(VectorSource(textVec)) 
-  
+  funs <- list(stripWhitespace,
+               concatenate_and_split_hyphens,
+               skipWords,
+               removePunctuation)
   if (removenumbers) {
-    funs <- list(stripWhitespace,
-                 concatenate_and_split_hyphens,
-                 skipWords,
-                 removePunctuation,
-                 removeNumbers,
-                 stemDocument)
-  } else {
-    funs <- list(stripWhitespace,
-                 concatenate_and_split_hyphens,
-                 skipWords,
-                 removePunctuation,
-                 stemDocument)
+    funs <- c(funs,removeNumbers)
+  } 
+  if (stemDoc) {
+    funs <- c(funs,stemDocument)
   }
   #normalize
   corpus <- tm_map(corpusraw, FUN = tm_reduce, tmFuns = funs)
