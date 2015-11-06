@@ -38,21 +38,34 @@ function mbc_dash(file) {
             .attr("id","info")
             .style('font-size','10px') 	
 
+    //var pathway = d3.select("body")
+    //        .append('div')
+     //       .attr('width',width)
+     //       .attr('height',height)
+     //       .attr('class','info')
+     //       .style('font-family','Helvetica')
+     //       .attr("id","pathway")
+     //       .style('font-size','10px') 
+
     //Pulldown menu
     var menu = d3.select('#menuselect').on("change", function() {
         var newFile = d3.select('#menuselect').property('value')
         title.selectAll('*').remove()
         abstract.selectAll('*').remove()
         info.selectAll('*').remove()
+        //pathway.selectAll('*').remove()
         display(newFile)
 
     });
 
     
     function display(file) {
-    	
-    	$.getJSON(file,function(dat){
+        
 
+
+
+    	$.getJSON(file,function(dat){
+//m stands for matched
     		var title = '<p>'+'<b>Title</b>: '+dat['AwardTitle'] + '</p>'
             var abstract = '<p>'+'<b> Abstract</b>: '+dat['TechAbstract']+ '</p>'
 	    	var information = '<p>'+'<b>&nbspAuthor</b>: '+dat['PILastName']+', '+ dat['PIFirstName']+ '</p>'
@@ -65,19 +78,50 @@ function mbc_dash(file) {
             information += '<p>'+'<b>&nbspPathway (Group)</b>: '+dat['Pathway (Group)']+ '</p>'
             information += '<p>'+'<b>&nbspMetastasis (Y/N)</b>: '+dat['Metastasis Y/N']+'</p>'
             information += '<p>'+'<b>&nbspMetastasis Stage</b>: '+dat['*Metastasis stage']+ '</p>'
-            information += '<p>'+'<b>&nbspdb_mt</b>: '+dat['db_mt']+ '</p>'
-            information += '<p>'+'<b>&nbspdb_pw</b>: '+dat['db_pw']+ '</p>'
-            information += '<p>'+'<b>&nbspdb_pwgene</b>: '+dat['db_pwgene']+ '</p>'
-            information += '<p>'+'<b>&nbspMatched_pathways</b>: '+dat['match_pathway']+ '</p>'
-            information += '<p>'+'<b>&nbspMatch_pwgroup</b>: '+dat['match_pwgroup']+ '</p>'
-            information += '<p>'+'<b>&nbspMatch_mts</b>: '+dat['match_mts']+ '</p>'
-            information += '<p>'+'<b>&nbspMatch_mtgroups</b>: '+dat['match_mtgroups']+ '</p>'
-            information += '<p>'+'<b>&nbspMatch_metastage</b>: '+dat['match_metastage']+ '</p>'
+            information += '<p>'+'<b>&nbspYin m_db_mt</b>: '+dat['db_mt']+ '</p>'
+            information += '<p>'+'<b>&nbspYin m_db_pw</b>: '+dat['db_pw']+ '</p>'
+            information += '<p>'+'<b>&nbspYin m_db_pwgene</b>: '+dat['db_pwgene']+ '</p>'
+            information += '<p>'+'<b>&nbspKEGG/Biocarta/WikiPath m_pw</b>: '+dat['dict_pathways']+ '</p>'
+            information += '<p>'+'<b>&nbspKEGG/Biocarta/WikiPath m_pwgene</b>: '+dat['dict_genes']+ '</p>'
+            information += '<p>'+'<b>&nbspMBC_annotes m_pathways</b>: <span contenteditable="true">'+dat['match_pathway']+ '</span></p>'
+            information += '<p>'+'<b>&nbspMBC_annotes m_pwgroup</b>: <span contenteditable="true">'+dat['match_pwgroup']+ '</span></p>'
+            information += '<p>'+'<b>&nbspMBC_annotes m_mts</b>: <span contenteditable="true">'+dat['match_mts']+ '</span></p>'
+            information += '<p>'+'<b>&nbspMBC_annotes m_mtgroups</b>: <span contenteditable="true">'+dat['match_mtgroups']+ '</span></p>'
+            information += '<p>'+'<b>&nbspMBC_annotes m_metastage</b>: <span contenteditable="true">'+dat['match_metastage']+ '</span></p>'
             information += '<br/>'
-
+            
+            
 	    	$(title).appendTo("#title");
 	    	$(abstract).appendTo("#abstract");
             $(information).appendTo("#info")
+
+
+            button = document.getElementById("save")
+
+            button.addEventListener("click", function() {
+                console.log("hello")
+$.post(
+    'cgi-bin/sample.cgi',
+    {
+        json : JSON.stringify(dat)
+    },
+    function (data, textStatus, jqXHR){
+    }
+).done(function(response) {
+    alert(response)
+});
+
+
+                /*.done(function(response) {
+    alert( response );
+  })
+  .fail(function() {
+    alert( "error" );
+  })
+  .always(function() {
+    alert( "complete" );
+  });;*/
+            }, false);
 
             $('#tobold').keypress(function(e) {
                 if (e.keyCode == '13') {
