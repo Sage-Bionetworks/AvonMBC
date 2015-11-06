@@ -2,8 +2,8 @@ library(rjson)
 library(stringr)
 library(tm)
 library(RTextTools)
-source("match_annote_functions.R")
-source("textmining_functions.R")
+source("R/match_annote_functions.R")
+source("R/textmining_functions.R")
 
 #--------------------------------------------------------
 #    Workflow
@@ -152,3 +152,47 @@ getvalues(pwgroupn_compare)
 getvalues(mtn_compare)
 getvalues(mtgroupn_compare)
 getvalues(metastagen_compare)
+
+
+# --------------------------------------------------------------------------
+# Matching to BioCarta, KEGG, and WikiPathways
+# --------------------------------------------------------------------------
+pathways = read.csv("pathways/new_all_pathways.txt",sep="+",header=F,stringsAsFactors = F)
+grantInfo = read.csv("metastatic_grant_binary.csv")
+mainData <- as.vector(paste(grantInfo$AwardTitle,grantInfo$TechAbstract))
+normalized_main <- normalise_text(mainData,removenumbers = F,stemDoc = F)
+
+index=1;
+f<-sapply(normalized_main$abstracts, function(x) {
+  tokens <- unlist(strsplit(x," "))
+  t<-sapply(pathways$V2, function(y) {
+    genes <- tolower(unlist(strsplit(y,",")))
+    #returns a list of sum of times genes appear in abstract, and the gene that appears
+    return(list(sum = sum(genes%in%tokens),gene = genes[genes%in%tokens]))
+  })
+  sums <- unlist(t[1,])
+  maxValue <- max(names(table(sums)))
+  #Pathway that goes along with the gene matched
+  match <- pathways[which(t[1,]==maxValue),1]
+  intersect_genes <- t[2,which(t[1,]==maxValue)]
+  pathways = paste(match,collapse=", ")
+  matched_gene = paste(toupper(unique(intersect_genes)),collapse=", ")
+  if (maxValue==0) { #If no match, specify
+    pathways = "No genes mentioned"
+    matched_gene = "No genes mentioned"
+  }
+  index <- which(x==normalized_main$abstracts)
+  temp <- fromJSON(file=sprintf("dataexample/new_jsons/%d.json",index[1]))
+  temp$dict_pathways <- pathways
+  temp$dict_genes <- matched_gene
+  #If file exists and index>1 then change index to index[2]
+  if (file.exists(sprintf("dataexample/match_dict_jsons/%d.json",index[1])) && length(index)>1) {
+    index = index[2]
+  } else {
+    index = index[1]
+  }
+  
+  sink(sprintf("dataexample/match_dict_jsons/%d.json",index))
+  cat(toJSON(temp))
+  sink()
+})
