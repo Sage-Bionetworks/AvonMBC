@@ -162,7 +162,6 @@ grantInfo = read.csv("metastatic_grant_binary.csv")
 mainData <- as.vector(paste(grantInfo$AwardTitle,grantInfo$TechAbstract))
 normalized_main <- normalise_text(mainData,removenumbers = F,stemDoc = F)
 
-
 f<-sapply(c(1:length(normalized_main$abstracts)), function(i) {
   x <- normalized_main$abstracts[i]
   tokens <- unlist(strsplit(x," "))
