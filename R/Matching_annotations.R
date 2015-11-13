@@ -162,8 +162,9 @@ grantInfo = read.csv("metastatic_grant_binary.csv")
 mainData <- as.vector(paste(grantInfo$AwardTitle,grantInfo$TechAbstract))
 normalized_main <- normalise_text(mainData,removenumbers = F,stemDoc = F)
 
-index=1;
-f<-sapply(normalized_main$abstracts, function(x) {
+
+f<-sapply(c(1:length(normalized_main$abstracts)), function(i) {
+  x <- normalized_main$abstracts[i]
   tokens <- unlist(strsplit(x," "))
   t<-sapply(pathways$V2, function(y) {
     genes <- tolower(unlist(strsplit(y,",")))
@@ -185,14 +186,8 @@ f<-sapply(normalized_main$abstracts, function(x) {
   temp <- fromJSON(file=sprintf("dataexample/new_jsons/%d.json",index[1]))
   temp$dict_pathways <- pathways
   temp$dict_genes <- matched_gene
-  #If file exists and index>1 then change index to index[2]
-  if (file.exists(sprintf("dataexample/match_dict_jsons/%d.json",index[1])) && length(index)>1) {
-    index = index[2]
-  } else {
-    index = index[1]
-  }
   
-  sink(sprintf("dataexample/match_dict_jsons/%d.json",index))
+  sink(sprintf("dataexample/match_dict_jsons/%d.json",i))
   cat(toJSON(temp))
   sink()
 })
