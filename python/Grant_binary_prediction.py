@@ -78,9 +78,18 @@ for i in range(0,len(total_nopunct)):
 
 
 train_data = total_complete[0:1500]
-train_result = grantInfo['pw_binary'][0:1500]
+train_result = grants['pw_binary'][0:1500]
 test_data = total_complete[1501:2236]
-test_result = grantInfo['pw_binary'][1501:2236]
+test_result = grants['pw_binary'][1501:2236]
+
+
+
+train_data = total_complete[0:1500]
+train_result = grants['mt_binary'][0:1500]
+test_data = total_complete[1501:2236]
+test_result = grants['mt_binary'][1501:2236]
+
+
 
 #----------------------------------------------------------------
 # Best Parameters
