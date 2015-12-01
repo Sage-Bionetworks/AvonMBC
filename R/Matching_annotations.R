@@ -4,44 +4,58 @@ library(tm)
 library(RTextTools)
 source("R/match_annote_functions.R")
 source("R/textmining_functions.R")
-
-#--------------------------------------------------------
+# --------------------------------------------------------
+# --------------------------------------------------------
 #    Workflow
-#--------------------------------------------------------
+# --------------------------------------------------------
+# --------------------------------------------------------
+
+
+
+# ------------------------------------------------------------------
+# Extract MBC provided annotations
+# ------------------------------------------------------------------
+
 #Get list of files and remove first index, because it is 0.json
 f<-list.files("dataexample/json",full.names = T)
-f[-1]
-#----------------------
-#Get human annotations
-#----------------------
+
 pathway <- getAnnote(f,"Pathway")
-pathway_group <- getAnnote(f,"Pathway (Group)")
-molecular_target_group <- getAnnote(f,"Molecular Target (Group)")
 molecular_target <- getAnnote(f,"Molecular Target")
-metastasis_stage <- getAnnote(f,"*Metastasis stage")
+
+#pathway_group <- getAnnote(f,"Pathway (Group)")
+#molecular_target_group <- getAnnote(f,"Molecular Target (Group)")
+#metastasis_stage <- getAnnote(f,"*Metastasis stage")
 #metastasis <- getAnnote(f,"Metastasis Y/N")
 
-#--------------------------
+# ------------------------------------------------------------------------------
 #Extract unique annotations
-#--------------------------
+# ------------------------------------------------------------------------------
 pathway <- annote_extract(pathway)
-pathway_group <- annote_extract(pathway_group)
-molecular_target_group <- annote_extract(molecular_target_group)
 molecular_target <- annote_extract(molecular_target)
-metastasis_stage <- annote_extract(metastasis_stage)
-#metastasis <- annote_extract(f,"Metastasis Y/N")
-write.table(pathway,"pathway_dict.csv",quote=F,row.names=F,col.names = F)
-write.table(pathway_group,"pwgroup_dict.csv",quote=F,row.names=F,col.names = F)
-write.table(molecular_target,"mt_dict.csv",quote=F,row.names=F,col.names = F)
-write.table(molecular_target_group,"mtgroup_dict.csv",quote=F,row.names=F,col.names = F)
-write.table(metastasis_stage,"metastage_dict.csv",quote=F,row.names=F,col.names = F)
 
+#pathway_group <- annote_extract(pathway_group)
+#molecular_target_group <- annote_extract(molecular_target_group)
+#metastasis_stage <- annote_extract(metastasis_stage)
+#metastasis <- annote_extract(f,"Metastasis Y/N")
+
+#Write out MBC annotation dictionaries
+write.table(pathway,"pathway_dict.csv",quote=F,row.names=F,col.names = F)
+write.table(molecular_target,"mt_dict.csv",quote=F,row.names=F,col.names = F)
+
+#write.table(pathway_group,"pwgroup_dict.csv",quote=F,row.names=F,col.names = F)
+#write.table(molecular_target_group,"mtgroup_dict.csv",quote=F,row.names=F,col.names = F)
+#write.table(metastasis_stage,"metastage_dict.csv",quote=F,row.names=F,col.names = F)
+
+
+
+
+# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Matching keyterms - Not normalized
+# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 #Get grants
 grantInfo <- read.csv("Metastatic_grant.csv")
-
-#----------------------
-#Matching keyterms
-#----------------------
 pathway_terms <- matching_keyterms(grantInfo, pathway,F)
 pwgroup_terms <- matching_keyterms(grantInfo, pathway_group,F)
 moleculartarget_terms <- matching_keyterms(grantInfo, molecular_target_group,F)
@@ -49,9 +63,9 @@ mtgroup_terms <- matching_keyterms(grantInfo, molecular_target,F)
 metastage_terms <- matching_keyterms(grantInfo, metastasis_stage,F)
 #meta_terms <- matching_keyterms(grantInfo, list_annotes)
 
-#--------------------------------------
-#Add keyterms to json
-#-----------------------------------
+# -------------------------------------------------------------
+# Add keyterms to json
+# -------------------------------------------------------------
 
 addition<-sapply(c(1:length(f)), function(x) {
   temp <- fromJSON(file=sprintf("dataexample/json/%d.json",x))
@@ -80,24 +94,23 @@ getvalues(mt_compare)
 getvalues(metastage_compare)
 
 
-
-#---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
 # Normalize data then do workflow
-#---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
+
 grantInfo <- read.csv("Metastatic_grant.csv",stringsAsFactors = F)
-
 mainData <- as.vector(paste(grantInfo$AwardTitle,grantInfo$TechAbstract))
-mainData <- toAmericanEnglish(mainData)
 norm_mainData <- normalise_text(mainData)
-
-norm_mainData$abstracts[1]
+norm_mainData[1]
 
 pw_pwgroup_mapped <- read.csv("dictionary/pw_pwgroup_mapping.csv",stringsAsFactors = F)
 
 #Normalize human annotated categories
-norm_pw <- normalise_text(pw_pwgroup_mapped[,1],F)
-norm_mainData <- normalise_text(grantInfo$TechAbstract,F)
+norm_pw <- normalise_text(pw_pwgroup_mapped$pw)
 
+norm_pw
 #Matching keyterms has normalize parameter (default = True), Input original grantInfo 
 #along with pw_pwgroup mapped
 norm_pw_match<- matching_keyterms(grantInfo,pw_pwgroup_mapped[,1],removeNumbers = T)
@@ -145,8 +158,6 @@ mtgroupn_compare<-compare("Molecular Target (Group)","match_mtgroups","Norm_json
 mtn_compare<-compare("Molecular Target","match_mts","Norm_json",T)
 metastagen_compare<-compare("*Metastasis stage","match_metastage","Norm_json",T)
 
-
-
 getvalues(pwn_compare)
 getvalues(pwgroupn_compare)
 getvalues(mtn_compare)
@@ -190,3 +201,37 @@ f<-sapply(c(1:length(normalized_main$abstracts)), function(i) {
   cat(toJSON(temp))
   sink()
 })
+
+##Accuracy of match
+all <- list.files("dataexample/match_dict_jsons",full.names=T)
+
+compare <- sapply(all, function(x) {
+  temp <- fromJSON(file=x)
+  if (temp$dict_pathways == "No genes mentioned") {
+    return(temp$Pathway)
+  } else {
+    return("+")
+  }
+})
+
+check <- compare[compare != "+"]
+sum(check=="-")
+sum(check=="n/a")
+sum(check=="N/A")
+sum(compare!="+")
+
+sort(unlist(unique(check)))
+
+View(check)
+unlist(check)
+sum(compare == "+")
+
+
+
+
+
+#---------------------------------------------------------
+# Grant normalized using python
+#---------------------------------------------------------
+normed <- read.csv("no")
+
