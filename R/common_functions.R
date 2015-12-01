@@ -1,6 +1,7 @@
 library(tm)
 library(rjson)
 library(stringr)
+library(RTextTools)
 # ---------------------------------------------------------------------
 # Text mining functions
 # ---------------------------------------------------------------------
@@ -63,15 +64,16 @@ normalise_text <- function(textVec,removenumbers=T,stemDoc=T) {
   #Convert corpus to dataframe  
   dataframe<-data.frame(abstracts=unlist(sapply(corpus, `[`, "content")), 
                         stringsAsFactors=F)
+  dataframe <- sapply(dataframe, trim)
   return(dataframe)
 }
 
 
-
+# ------------------------------------------------------------------
 # ------------------------------------------------------------------
 # Matching annotation functions
 # ------------------------------------------------------------------
-
+# ------------------------------------------------------------------
 
 # --------------------------------------------------------
 # get Specific annotation
@@ -123,26 +125,12 @@ annote_extract <- function(annote) {
 # Match top 5 key terms
 # --------------------------------------
 matching_keyterms <- function(text,annotes,normalized=T,removeNumbers=F) {
-  #grants <- paste(grantInfo$TechAbstract,grantInfo$AwardTitle,sep=",")
-  #if (normalized) { 
-  #  grants <- normalise_text(grants,removeNumbers)
-  #  list_annotes <- normalise_text(annotes,removeNumbers)
-  #HER, NO, and AM are removed, but these are important
-  #  list_annotes$abstracts[77] <- "her"
-  #  list_annotes$abstracts[207] <- "no"
-  #  list_annotes$abstracts[528] <- "am"
-  #}
   keyterms<- apply(as.matrix(text),1, function(x) {
-    words <- sapply(list_annotes$abstracts, function(y) {
+    words <- sapply(annotes, function(y) {
       #coll searches for just the word
       return(str_count(x,sprintf("\\b%s\\b",y)))
     })
-    #if (normalized) {
-    #return(annotes[words>0])
     return(names(words[words>0]))
-    #} #else {
-    #return(names(sort(words[words>0],decreasing = T)[1:5]))
-    #}
   })
   return(keyterms)
 }
@@ -150,20 +138,23 @@ matching_keyterms <- function(text,annotes,normalized=T,removeNumbers=F) {
 #--------------------------------------
 #Compare keyterms with human annotated
 #--------------------------------------
-compare <- function(human_annote, machine_annote,folder,noNA=F,removeNumbers=T) {
+#pwn_compare <- compare("Pathway","match_pathway","Norm_json",noNA = T)
+
+compare <- function(human_annote, machine_annote,folder,noNA=F) {
   accuracy<-lapply(c(1:2237), function(x) {
-    temp <- fromJSON(file=sprintf("dataexample/%s/%d.json",folder,x))
+    temp <- fromJSON(file=sprintf("dataexample/%s/%dnew.json",folder,x))
     machine<-unlist(temp[sprintf("%s",machine_annote)],use.names=F)
     human <- unlist(temp[sprintf("%s",human_annote)],use.names=F)
     lower <- tolower(human)
+    #Text still has to be a little bit normalized, just don't remove numbers/stem Doc
     if (folder == "Norm_json") {
-      human <- gsub("/"," ",human)
-      human <- gsub(";"," ",human)
-      human <- as.vector(human)
-      human <- normalise_text(human,removeNumbers)
+      human <- normalise_text(human)
+      human <- unlist(unique(human),use.names = F)
+    } else {
+      human <- normalise_text(human,removenumbers = F, stemDoc = F)
       human <- unlist(unique(human),use.names = F)
     }
-    #print(human)
+    
     toms<- unlist(strsplit(machine,","))
     num<-sapply(toms, function(y) {
       grep(sprintf("\\b%s\\b",y),human,ignore.case =T)
@@ -173,7 +164,7 @@ compare <- function(human_annote, machine_annote,folder,noNA=F,removeNumbers=T) 
       if (is.null(human)) {
         return(0.5)
         #Remove multiple as, it would be silly to match against the term "multiple"
-      } else if (human == "-" || lower =="not specified" || lower == "n/a"  ||
+      } else if (human == "" || human == "-" || lower =="not specified" || lower == "n/a"  ||
                  lower == "other/not specified" || lower == "not relevant" ||
                  lower == "no abstract" || lower == "n/a (chemo delivery system)" || 
                  lower == "n/a (imaging of mets)"|| lower == "n/a (imaging)" || 
@@ -200,6 +191,6 @@ getvalues <- function(compare) {
   print(paste("accuracy with NA:",mean(compare>0.5),sep=" "))
   print(paste("# NA:",sum(compare==0.5),sep=" "))
   print(paste("# Multiple/Other:",sum(compare==-1),sep=" "))
-  temp<-compare[compare!=0.5 && compare != -1]
+  temp<-compare[compare!=0.5 & compare != -1]
   print(paste("accuracy without NA:",mean(temp>0),sep=" "))
 }
