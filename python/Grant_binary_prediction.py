@@ -147,6 +147,7 @@ def findBestParameters(train_data, train_result):
 #----------------------------------------------------------------
 grants = pandas.read_csv('metastatic_grant_binary.csv')
 total = grants['AwardTitle'] + ", " + grants['TechAbstract']
+
 train_data = total_complete[0:1500]
 train_result = grants['pw_binary'][0:1500]
 test_data = total_complete[1501:2236]
@@ -331,9 +332,9 @@ def show_top10(classifier, vectorizer, categories):
 
 
 
-# ------------------------------------------
+# -----------------------------------------------------
 # Classification of grants metastatic stage
-# ------------------------------------------
+# -----------------------------------------------------
 grants = pandas.read_csv('metastatic_grant_binary.csv')
 MBCgrants = grants[grants['Metastasis.Y.N']=="y"]
 #Get unique metastasis stages
@@ -344,29 +345,52 @@ for num,meta in enumerate(stages):
     MBCgrants['stageNumerical'][temp] = num
 
 total = MBCgrants['AwardTitle'] + ", " + MBCgrants['TechAbstract']
-total_complete = normalize_text(total,removeNumbers = True, stemDocument = True)
+total_complete = normalize_text(total,removeNumbers = False, stemDocument = False)
 
 train_data = total_complete[0:1500]
-train_result = MBCgrants['stageNumerical'][0:1500]
+true_train = MBCgrants['stageNumerical'][0:1500]
 test_data = total_complete[1501:2236]
-test_result = MBCgrants['stageNumerical'][1501:2236]
+true_test = MBCgrants['stageNumerical'][1501:2236]
 
-vectorizer = CountVectorizer(max_df=0.75,max_features = 50000, ngram_range = (1,2))
-X = vectorizer.fit_transform(total_complete)
-analyze = vectorizer.build_analyzer()
-vectorizer.get_feature_names()
+svmWorkFlow(train_data, true_train, test_data,true_test)
 
+def svmWorkFlow(train_data, true_train, test_data,true_test, 
+                vect__max_df=0.75,vect__max_features = 50000,vect__ngram_range = (1,2),
+                tfidf__use_idf = False,tfidf__norm='l2'):
+    """
+    Input training data, training data true values, test data and test data true values.
+    Work Flow:
+        CountVectorizer
+            - max_df
+            - max_features
+            - ngram_range
+        Tfidf transformer
+            - norm
+            - use_idf
+        svm
+            - kernel
+    """
+    vectorizer = CountVectorizer(max_df=vect__max_df,
+        max_features = vect__max_features, 
+        ngram_range = vect__ngram_range)
+    X_train = vectorizer.fit_transform(train_data)
+    X_test = vectorizer.transform(test_data)
+    #tfidf transformer
+    transformer = TfidfTransformer(norm = tfidf__norm,use_idf = tfidf__use_idf)
+    tfidf_train = transformer.fit_transform(X_train)
+    tfidf_test = transformer.transform(X_test)
+    #features_array = X.toarray()
+    training_features = tfidf_train.toarray() 
+    test_features = tfidf_test.toarray()
+    #SVM
+    svc = svm.SVC(kernel='linear')
+    svc.fit(training_features, true_train)  
+    predictions = svc.predict(test_features)
+    print "Accuracy"
+    print numpy.mean(predictions == true_test)
+    return(predictions)
+# 54%
 
-transformer = TfidfTransformer(norm = 'l2',use_idf = False)
-tfidf = transformer.fit_transform(X)
-#features_array = X.toarray()
-features_array = tfidf.toarray() 
-
-svc = svm.SVC(kernel='linear')
-svc.fit(features_array[0:1500], MBCgrants['X.Metastasis.stage'][0:1500])  
-predictions = svc.predict(features_array[1501:2236])
-
-numpy.mean(predictions == MBCgrants['X.Metastasis.stage'][1501:2236])
 
 
 
