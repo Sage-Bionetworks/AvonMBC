@@ -38,10 +38,11 @@ import unicodedata
 import numpy
 import pprint
 
+#-------------------------------------------------------------------------------
+# python functions
+#-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-#Check if it is a number, if not return the word, if it is return a stop word
-#-------------------------------------------------------------------------------
+# Check if it is a number, if not return the word, if it is return a stop word
 def is_number(s):
     try:
         float(s)
@@ -49,98 +50,107 @@ def is_number(s):
     except ValueError:
         return s
 
+#Normalize text
+#Remove HTML, replace non-ascii characters, tokenize (remove punctuation), stem words, then reconcatenate
+def normalize_text(grants, removeNumbers = True, stemDocument = True):
+    #no, hers, and her can be pathway names
+    unwantedWords = [i for i in stopwords.words('english') if i not in ['no','her','hers']]
+    #Remove html
+    grants = [BeautifulSoup(i,"html.parser").get_text() for i in grants]
+    #Replace Ascii
+    grants = [unicodedata.normalize('NFKD', text).encode('ascii','ignore') for text in grants]
+    #Get rid of numbers
+    if removeNumbers:
+        grants = [re.sub(r'\d+', '', text) for text in grants]
+    #Get rid of periods, slashes, and punctuation all together
+    grants = [re.sub(r'\D\.\D',' ', text) for text in grants]
+    grants = [re.sub(r'\b\/\b',' ', text) for text in grants]
+    #grants = [re.sub(r'\b-\b','',text) for text in grants]
+    grants = [nltk.word_tokenize(text.translate(None, string.punctuation)) for text in grants]
+    #Use english stemmer
+    stemmer = SnowballStemmer("english")
+    normalized_grants=[]
+    for text in grants:
+        #temp  = [is_number(text)  for text in total_nopunct[i] ]
+        temp = [word for word in text if word not in unwantedWords]
+        if stemDocument:
+            temp = [stemmer.stem(word) for word in temp]
+        #Remove stop words
+        normalized_grants.append(' '.join(temp))
+    return normalized_grants
+
 #--------------------------------------------------------------------------------------
 #Normalization of text (Remove HTML, replace non-ascii characters, remove punctuation,
 #remove lone numbers, stem words, remove stop words recombine into text)
 #--------------------------------------------------------------------------------------
 grants = pandas.read_csv('metastatic_grant_binary.csv')
 total = grants['AwardTitle'] + ", " + grants['TechAbstract']
-stopwords.words('english')
-#Remove HTML, replace non-ascii characters, tokenize (remove punctuation), stem words, then reconcatenate
-text_noHTML = [BeautifulSoup(i).get_text() for i in total]
-total_ascii = [unicodedata.normalize('NFKD', text).encode('ascii','ignore') for text in text_noHTML]
-total_noNumbers = [re.sub(r'\d+', '', text) for text in total_ascii]
-total_noperiod = [re.sub(r'\D\.\D',' ', text) for text in total_noNumbers]
-total_noslash = [re.sub(r'\b\/\b',' ', text) for text in total_noperiod]
-total_combinedash = [re.sub(r'\b-\b','',text) for text in total_noslash]
-total_nopunct = [nltk.word_tokenize(text.translate(None, string.punctuation)) for text in total_combinedash]
 
-
-
-#Use english stemmer
-stemmer = SnowballStemmer("english")
-total_complete=[]
-for i in range(0,len(total_nopunct)):
-	#temp  = [is_number(text)  for text in total_nopunct[i] ]
-	temp = [stemmer.stem(word) for word in total_nopunct[i]]
-	temp = [word for word in temp if word not in stopwords.words('english')]
-	total_complete.append(' '.join(temp))
-
+total_complete = normalize_text(total)
 
 train_data = total_complete[0:1500]
 train_result = grants['pw_binary'][0:1500]
 test_data = total_complete[1501:2236]
 test_result = grants['pw_binary'][1501:2236]
 
-
+findBestParameters(train_data, train_result)
 
 train_data = total_complete[0:1500]
 train_result = grants['mt_binary'][0:1500]
 test_data = total_complete[1501:2236]
 test_result = grants['mt_binary'][1501:2236]
 
+findBestParameters(train_data, train_result)
 
 
-#----------------------------------------------------------------
-# Best Parameters
-#----------------------------------------------------------------
-pipeline = Pipeline([
-    ('vect', CountVectorizer()),
-    ('tfidf', TfidfTransformer()),
-    ('clf', SGDClassifier()),
-])
+#--------------------------------------------------------------------
+# Best Parameters CountVectorizer, Tfidf transformer, SGD classifier 
+#--------------------------------------------------------------------
+def findBestParameters(train_data, train_result):
+    pipeline = Pipeline([
+        ('vect', CountVectorizer()),
+        ('tfidf', TfidfTransformer()),
+        ('clf', SGDClassifier()),
+    ])
+    parameters = {
+        'vect__max_df': (0.5, 0.75, 1.0),
+        'vect__max_features': (None, 5000, 10000, 50000),
+        'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
+        'tfidf__use_idf': (True, False),
+        'tfidf__norm': ('l1', 'l2'),
+        'clf__alpha': (0.00001, 0.000001),
+        'clf__penalty': ('l2', 'elasticnet'),
+        'clf__n_iter': (10, 50, 80),
+    }
+    # find the best parameters for both the feature extraction and the
+    # classifier
+    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)
+    print("Performing grid search...")
+    print("pipeline:", [name for name, _ in pipeline.steps])
+    print("parameters:")
+    print(parameters)
+    t0 = time()
+    grid_search.fit(train_data, train_result)
+    print("done in %0.3fs" % (time() - t0))
+    print()
 
-# uncommenting more parameters will give better exploring power but will
-# increase processing time in a combinatorial way
-parameters = {
-    'vect__max_df': (0.5, 0.75, 1.0),
-    'vect__max_features': (None, 5000, 10000, 50000),
-    'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
-    'tfidf__use_idf': (True, False),
-    'tfidf__norm': ('l1', 'l2'),
-    'clf__alpha': (0.00001, 0.000001),
-    'clf__penalty': ('l2', 'elasticnet'),
-    'clf__n_iter': (10, 50, 80),
-}
-# multiprocessing requires the fork to happen in a __main__ protected
-# block
-
-# find the best parameters for both the feature extraction and the
-# classifier
-grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)
-
-print("Performing grid search...")
-print("pipeline:", [name for name, _ in pipeline.steps])
-print("parameters:")
-print(parameters)
-t0 = time()
-grid_search.fit(train_data, train_result)
-print("done in %0.3fs" % (time() - t0))
-print()
-
-print("Best score: %0.3f" % grid_search.best_score_)
-print("Best parameters set:")
-best_parameters = grid_search.best_estimator_.get_params()
-for param_name in sorted(parameters.keys()):
-	print("\t%s: %r" % (param_name, best_parameters[param_name]))
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(parameters.keys()):
+    	print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
 
 #----------------------------------------------------------------
 # SCIKIT TOOLS -> Get features by using TfidF Vectorizer
 #----------------------------------------------------------------
-
-
+grants = pandas.read_csv('metastatic_grant_binary.csv')
+total = grants['AwardTitle'] + ", " + grants['TechAbstract']
+train_data = total_complete[0:1500]
+train_result = grants['pw_binary'][0:1500]
+test_data = total_complete[1501:2236]
+test_result = grants['pw_binary'][1501:2236]
 
 vectorizer = CountVectorizer(max_df=0.0005,stop_words='english')
 X = vectorizer.fit_transform(total_complete)
@@ -166,6 +176,14 @@ numpy.mean(predictions == grantInfo['pw_binary'][1501:2236])
 #----------------------------------------------------------------------
 # Classification of text documents using sparse features
 #----------------------------------------------------------------------
+grants = pandas.read_csv('metastatic_grant_binary.csv')
+total = grants['AwardTitle'] + ", " + grants['TechAbstract']
+
+train_data = total_complete[0:1500]
+train_result = grants['pw_binary'][0:1500]
+test_data = total_complete[1501:2236]
+test_result = grants['pw_binary'][1501:2236]
+
 vectorizer = TfidfVectorizer(sublinear_tf=True, max_df=0.5,
                                  stop_words='english')
 X_train = vectorizer.fit_transform(train_data)
@@ -310,3 +328,46 @@ def show_top10(classifier, vectorizer, categories):
 #Different categories mean 
 #Linear discriminant analysis
 #----------------------------------------------------------------------
+
+
+
+# ------------------------------------------
+# Classification of grants metastatic stage
+# ------------------------------------------
+grants = pandas.read_csv('metastatic_grant_binary.csv')
+MBCgrants = grants[grants['Metastasis.Y.N']=="y"]
+#Get unique metastasis stages
+stages = set(MBCgrants['X.Metastasis.stage'])
+MBCgrants['stageNumerical']= MBCgrants.index
+for num,meta in enumerate(stages):
+    temp = MBCgrants['X.Metastasis.stage'] == meta
+    MBCgrants['stageNumerical'][temp] = num
+
+total = MBCgrants['AwardTitle'] + ", " + MBCgrants['TechAbstract']
+total_complete = normalize_text(total,removeNumbers = True, stemDocument = True)
+
+train_data = total_complete[0:1500]
+train_result = MBCgrants['stageNumerical'][0:1500]
+test_data = total_complete[1501:2236]
+test_result = MBCgrants['stageNumerical'][1501:2236]
+
+vectorizer = CountVectorizer(max_df=0.75,max_features = 50000, ngram_range = (1,2))
+X = vectorizer.fit_transform(total_complete)
+analyze = vectorizer.build_analyzer()
+vectorizer.get_feature_names()
+
+
+transformer = TfidfTransformer(norm = 'l2',use_idf = False)
+tfidf = transformer.fit_transform(X)
+#features_array = X.toarray()
+features_array = tfidf.toarray() 
+
+svc = svm.SVC(kernel='linear')
+svc.fit(features_array[0:1500], MBCgrants['X.Metastasis.stage'][0:1500])  
+predictions = svc.predict(features_array[1501:2236])
+
+numpy.mean(predictions == MBCgrants['X.Metastasis.stage'][1501:2236])
+
+
+
+
