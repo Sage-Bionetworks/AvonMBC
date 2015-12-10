@@ -37,47 +37,13 @@ from bs4 import BeautifulSoup
 import unicodedata 
 import numpy
 import pprint
+from random import shuffle
+#Get common functions
+from common_functions import *
+# -----------------------------------------------------------------------------------
+# This is the workflow document, all functions are in common_functions.py
+# -----------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-# python functions
-#-------------------------------------------------------------------------------
-
-# Check if it is a number, if not return the word, if it is return a stop word
-def is_number(s):
-    try:
-        float(s)
-        return 'the'
-    except ValueError:
-        return s
-
-#Normalize text
-#Remove HTML, replace non-ascii characters, tokenize (remove punctuation), stem words, then reconcatenate
-def normalize_text(grants, removeNumbers = True, stemDocument = True):
-    #no, hers, and her can be pathway names
-    unwantedWords = [i for i in stopwords.words('english') if i not in ['no','her','hers']]
-    #Remove html
-    grants = [BeautifulSoup(i,"html.parser").get_text() for i in grants]
-    #Replace Ascii
-    grants = [unicodedata.normalize('NFKD', text).encode('ascii','ignore') for text in grants]
-    #Get rid of numbers
-    if removeNumbers:
-        grants = [re.sub(r'\d+', '', text) for text in grants]
-    #Get rid of periods, slashes, and punctuation all together
-    grants = [re.sub(r'\D\.\D',' ', text) for text in grants]
-    grants = [re.sub(r'\b\/\b',' ', text) for text in grants]
-    #grants = [re.sub(r'\b-\b','',text) for text in grants]
-    grants = [nltk.word_tokenize(text.translate(None, string.punctuation)) for text in grants]
-    #Use english stemmer
-    stemmer = SnowballStemmer("english")
-    normalized_grants=[]
-    for text in grants:
-        #temp  = [is_number(text)  for text in total_nopunct[i] ]
-        temp = [word for word in text if word not in unwantedWords]
-        if stemDocument:
-            temp = [stemmer.stem(word) for word in temp]
-        #Remove stop words
-        normalized_grants.append(' '.join(temp))
-    return normalized_grants
 
 #--------------------------------------------------------------------------------------
 #Normalization of text (Remove HTML, replace non-ascii characters, remove punctuation,
@@ -88,10 +54,13 @@ total = grants['AwardTitle'] + ", " + grants['TechAbstract']
 
 total_complete = normalize_text(total)
 
+total_complete.reindex(numpy.random.permutation(total_complete.index))
+
+
 train_data = total_complete[0:1500]
-train_result = grants['pw_binary'][0:1500]
+train_result = grants['Metastasis_YN'][0:1500]
 test_data = total_complete[1501:2236]
-test_result = grants['pw_binary'][1501:2236]
+test_result = grants['Metastasis_YN'][1501:2236]
 
 findBestParameters(train_data, train_result)
 
@@ -101,45 +70,6 @@ test_data = total_complete[1501:2236]
 test_result = grants['mt_binary'][1501:2236]
 
 findBestParameters(train_data, train_result)
-
-
-#--------------------------------------------------------------------
-# Best Parameters CountVectorizer, Tfidf transformer, SGD classifier 
-#--------------------------------------------------------------------
-def findBestParameters(train_data, train_result):
-    pipeline = Pipeline([
-        ('vect', CountVectorizer()),
-        ('tfidf', TfidfTransformer()),
-        ('clf', SGDClassifier()),
-    ])
-    parameters = {
-        'vect__max_df': (0.5, 0.75, 1.0),
-        'vect__max_features': (None, 5000, 10000, 50000),
-        'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
-        'tfidf__use_idf': (True, False),
-        'tfidf__norm': ('l1', 'l2'),
-        'clf__alpha': (0.00001, 0.000001),
-        'clf__penalty': ('l2', 'elasticnet'),
-        'clf__n_iter': (10, 50, 80),
-    }
-    # find the best parameters for both the feature extraction and the
-    # classifier
-    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)
-    print("Performing grid search...")
-    print("pipeline:", [name for name, _ in pipeline.steps])
-    print("parameters:")
-    print(parameters)
-    t0 = time()
-    grid_search.fit(train_data, train_result)
-    print("done in %0.3fs" % (time() - t0))
-    print()
-
-    print("Best score: %0.3f" % grid_search.best_score_)
-    print("Best parameters set:")
-    best_parameters = grid_search.best_estimator_.get_params()
-    for param_name in sorted(parameters.keys()):
-    	print("\t%s: %r" % (param_name, best_parameters[param_name]))
-
 
 
 #----------------------------------------------------------------
@@ -174,9 +104,10 @@ predictions = svc.predict(features_array[1501:2236])
 numpy.mean(predictions == grantInfo['pw_binary'][1501:2236])
 
 
-#----------------------------------------------------------------------
-# Classification of text documents using sparse features
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# Classification of text documents using sparse features using variety
+# of different machine learning algorithms
+# ----------------------------------------------------------------------
 grants = pandas.read_csv('metastatic_grant_binary.csv')
 total = grants['AwardTitle'] + ", " + grants['TechAbstract']
 
@@ -253,9 +184,6 @@ results.append(benchmark(L1LinearSVC()))
 
 
 
-
-
-
 #------------------------------------------------------------------------------------
 # NLTK collocations, and getting all proper nouns after the text has been normalized
 #------------------------------------------------------------------------------------
@@ -280,44 +208,8 @@ for i in total_complete:
 
 
 
-
 #searching for the word
 #text.concordance('HPR1')
-
-#----------------------------------------------------------------------
-# BENCHMARK
-#----------------------------------------------------------------------
-feature_names=None
-def benchmark(clf):
-    print('_' * 80)
-    print("Training: ")
-    print(clf)
-    t0 = time()
-    clf.fit(X_train, train_result)
-    train_time = time() - t0
-    print("train time: %0.3fs" % train_time)
-
-    t0 = time()
-    pred = clf.predict(X_test)
-    test_time = time() - t0
-    print("test time:  %0.3fs" % test_time)
-
-    score = metrics.f1_score(test_result, pred)
-    print("f1-score:   %0.3f" % score)
-
-    if hasattr(clf, 'coef_'):
-        print("dimensionality: %d" % clf.coef_.shape[1])
-        print("density: %f" % density(clf.coef_))
-
-    print()
-    clf_descr = str(clf).split('(')[0]
-    return clf_descr, score, train_time, test_time
-
-def show_top10(classifier, vectorizer, categories):
-    feature_names = np.asarray(vectorizer.get_feature_names())
-    for i, category in enumerate(categories):
-        top10 = np.argsort(classifier.coef_[i])[-10:]
-        print("%s: %s" % (category, " ".join(feature_names[top10])))
 
 #----------------------------------------------------------------------
 # semi feature selection
@@ -353,44 +245,56 @@ test_data = total_complete[1501:2236]
 true_test = MBCgrants['stageNumerical'][1501:2236]
 
 svmWorkFlow(train_data, true_train, test_data,true_test)
-
-def svmWorkFlow(train_data, true_train, test_data,true_test, 
-                vect__max_df=0.75,vect__max_features = 50000,vect__ngram_range = (1,2),
-                tfidf__use_idf = False,tfidf__norm='l2'):
-    """
-    Input training data, training data true values, test data and test data true values.
-    Work Flow:
-        CountVectorizer
-            - max_df
-            - max_features
-            - ngram_range
-        Tfidf transformer
-            - norm
-            - use_idf
-        svm
-            - kernel
-    """
-    vectorizer = CountVectorizer(max_df=vect__max_df,
-        max_features = vect__max_features, 
-        ngram_range = vect__ngram_range)
-    X_train = vectorizer.fit_transform(train_data)
-    X_test = vectorizer.transform(test_data)
-    #tfidf transformer
-    transformer = TfidfTransformer(norm = tfidf__norm,use_idf = tfidf__use_idf)
-    tfidf_train = transformer.fit_transform(X_train)
-    tfidf_test = transformer.transform(X_test)
-    #features_array = X.toarray()
-    training_features = tfidf_train.toarray() 
-    test_features = tfidf_test.toarray()
-    #SVM
-    svc = svm.SVC(kernel='linear')
-    svc.fit(training_features, true_train)  
-    predictions = svc.predict(test_features)
-    print "Accuracy"
-    print numpy.mean(predictions == true_test)
-    return(predictions)
+# Accuracy
 # 54%
 
+
+# ------------------------------------------
+# classify Metastasis Y/N
+# ------------------------------------------
+grants = pandas.read_csv('documents/ICRP_allcombined_grants.csv')
+shuffledGrants = grants.reindex(numpy.random.permutation(grants.index))
+total = shuffledGrants['AwardTitle'] + ", " + shuffledGrants['TechAbstract']
+
+total_complete = normalize_text(total,removeNumbers = False, stemDocument = False)
+
+interval = int(len(total_complete)/5)
+a = total_complete[0:interval]
+b = total_complete[interval:2*interval]
+c = total_complete[2*interval:3*interval]
+d = total_complete[3*interval:4*interval]
+e = total_complete[4*interval:len(total_complete)]
+
+a_result = shuffledGrants['Metastasis_YN'][0:interval]
+b_result = shuffledGrants['Metastasis_YN'][interval+1:2*interval]
+c_result = shuffledGrants['Metastasis_YN'][2*interval+1:3*interval]
+d_result = shuffledGrants['Metastasis_YN'][3*interval+1:4*interval]
+e_result = shuffledGrants['Metastasis_YN'][4*interval+1:len(total_complete)]
+
+train_data = a+b+c+d
+true_train = a_result +  b_result+ c_result+ d_result
+test_data = e
+true_test = e_result
+
+#train_data = total_complete[0:int(len(total_complete)*0.75)]
+#true_train = shuffledGrants['Metastasis_YN'][0:int(len(total_complete)*0.75)]
+#test_data = total_complete[int(len(total_complete)*0.75)+1:len(total_complete)]
+#true_test = shuffledGrants['Metastasis_YN'][int(len(total_complete)*0.75)+1:len(total_complete)]
+C = range(1,100,2)
+allmetrics = dict()
+index = ['TP','FP','FN','TN']
+df = pandas.DataFrame(index = index, columns = C)
+
+for i in C:
+    metrics = svmWorkFlow(train_data,true_train,test_data,true_test,C = i)
+    f[i] = metrics
+    df[i] = [metrics['TP'],metrics['FP'],metrics['FN'],metrics['TN']]
+
+df.to_csv("./test.csv")
+#Accuracy
+#0.953719008264!
+#538 yes
+#3697 no
 
 
 
