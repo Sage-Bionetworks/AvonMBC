@@ -80,9 +80,13 @@ def findBestParameters(train_data, train_result):
 # ------------------------------------------
 # Machine learning algorithms
 # ------------------------------------------
-def svmWorkFlow(train_data, true_train, test_data,true_test,C=1, 
-                vect__max_df=0.75,vect__max_features = 50000,vect__ngram_range = (1,2),
-                tfidf__use_idf = False,tfidf__norm='l2'):
+def svmWorkFlow(train_data, true_train, test_data,true_test,
+                C=1, 
+                vect__max_df=0.75,
+                vect__max_features = 50000,
+                vect__ngram_range = (1,2),
+                tfidf__use_idf = False,
+                tfidf__norm='l2'):
     """
     Input training data, training data true values, test data and test data true values.
     Work Flow:
@@ -115,6 +119,7 @@ def svmWorkFlow(train_data, true_train, test_data,true_test,C=1,
     svc = svm.SVC(C,kernel='linear')
     svc.fit(training_features, true_train)  
     predictions = svc.predict(test_features)
+    prediction_score = svc.decision_function(test_features)
     #Metrics Calculation confusion matrix AUC
     #5-fold 
     #Divide into 5 parts, and use different 4 training set, will get 5 different metrics
@@ -126,7 +131,7 @@ def svmWorkFlow(train_data, true_train, test_data,true_test,C=1,
     print "Accuracy"
     print numpy.mean(predictions == true_test)
     confusion = confusion_matrix(true_test,predictions)
-    return dict(predictions = predictions, TP = confusion[0,0], FP = confusion[0,1], FN = confusion[1,0], TN = confusion[1,1])
+    return dict(predictions = predictions,prediction_score = prediction_score, TP = confusion[0,0], FP = confusion[0,1], FN = confusion[1,0], TN = confusion[1,1])
 
 #linear regression
 def linearRegressionWorkFlow(train_data, true_train, test_data,true_test, 
@@ -152,6 +157,47 @@ def linearRegressionWorkFlow(train_data, true_train, test_data,true_test,
     print numpy.mean(predictions == true_test)
     return(predictions)
 
+def randomForestWorkflow(train_data, true_train, test_data,true_test,
+                C=1, 
+                vect__max_df=0.75,
+                vect__max_features = 50000,
+                vect__ngram_range = (1,2),
+                tfidf__use_idf = False,
+                tfidf__norm='l2'):
+    """
+    Input training data, training data true values, test data and test data true values.
+    Work Flow:
+        CountVectorizer
+            - max_df
+            - max_features
+            - ngram_range
+        Tfidf transformer
+            - norm
+            - use_idf
+        svm
+            - kernel
+    """
+    vectorizer = CountVectorizer(max_df=vect__max_df,
+        max_features = vect__max_features,
+        #If not None, build a vocabulary that only consider the top max_features ordered by
+        #term frequency across the corpus.
+        ngram_range = vect__ngram_range)
+    #Figure out what countvectorizer is doing in feature selection 
+    X_train = vectorizer.fit_transform(train_data)
+    X_test = vectorizer.transform(test_data)
+    #tfidf transformer
+    transformer = TfidfTransformer(norm = tfidf__norm,use_idf = tfidf__use_idf)
+    tfidf_train = transformer.fit_transform(X_train)
+    tfidf_test = transformer.transform(X_test)
+    #features_array = X.toarray()
+    training_features = tfidf_train.toarray()
+    test_features = tfidf_test.toarray()
+    #SVM
+    clf = RandomForestClassifier(n_estimators=C)
+    clf.fit(training_features, true_train)
+    predictions = clf.predict(test_features)
+    score = clf.score(test_features,true_test)
+    return dict(predictions = predictions,score=score)
 
 #----------------------------------------------------------------------
 # BENCHMARK

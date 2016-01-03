@@ -19,6 +19,9 @@ from sklearn.utils.extmath import density
 from sklearn import metrics
 from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+
 #NLTK -> tokenizer, stemmer
 import nltk
 from nltk.collocations import *
@@ -252,18 +255,22 @@ svmWorkFlow(train_data, true_train, test_data,true_test)
 # ------------------------------------------
 # classify Metastasis Y/N
 # ------------------------------------------
-grants = pandas.read_csv('documents/ICRP_allcombined_grants.csv')
+grants = pandas.read_csv('ICRP_allcombined_grants.csv')
 shuffledGrants = grants.reindex(numpy.random.permutation(grants.index))
-total = shuffledGrants['AwardTitle'] + ", " + shuffledGrants['TechAbstract']
+shuffledGrants['TitleAbstract'] = shuffledGrants['AwardTitle'] + ", " + shuffledGrants['TechAbstract']
 
-total_complete = normalize_text(total,removeNumbers = False, stemDocument = False)
+total_complete = normalize_text(shuffledGrants['TitleAbstract'],removeNumbers = False, stemDocument = False)
+shuffledGrants['norm_TitleAbstract'] = total_complete
+#shuffledGrants.to_csv("shuffledGrants.csv",index=False)
 
-interval = int(len(total_complete)/5)
-a = total_complete[0:interval]
-b = total_complete[interval:2*interval]
-c = total_complete[2*interval:3*interval]
-d = total_complete[3*interval:4*interval]
-e = total_complete[4*interval:len(total_complete)]
+shuffledGrants = pandas.read_csv("shuffledGrants.csv")
+
+interval = int(len(total_df)/5)
+a = shuffledGrants['norm_TitleAbstract'][0:interval]
+b = shuffledGrants['norm_TitleAbstract'][interval+1:2*interval]
+c = shuffledGrants['norm_TitleAbstract'][2*interval+1:3*interval]
+d = shuffledGrants['norm_TitleAbstract'][3*interval+1:4*interval]
+e = shuffledGrants['norm_TitleAbstract'][4*interval+1:len(total_complete)]
 
 a_result = shuffledGrants['Metastasis_YN'][0:interval]
 b_result = shuffledGrants['Metastasis_YN'][interval+1:2*interval]
@@ -271,8 +278,8 @@ c_result = shuffledGrants['Metastasis_YN'][2*interval+1:3*interval]
 d_result = shuffledGrants['Metastasis_YN'][3*interval+1:4*interval]
 e_result = shuffledGrants['Metastasis_YN'][4*interval+1:len(total_complete)]
 
-train_data = a+b+c+d
-true_train = a_result +  b_result+ c_result+ d_result
+train_data = pandas.concat([a,b,c,d])
+true_train = pandas.concat([a_result,b_result,c_result,d_result])
 test_data = e
 true_test = e_result
 
@@ -280,15 +287,17 @@ true_test = e_result
 #true_train = shuffledGrants['Metastasis_YN'][0:int(len(total_complete)*0.75)]
 #test_data = total_complete[int(len(total_complete)*0.75)+1:len(total_complete)]
 #true_test = shuffledGrants['Metastasis_YN'][int(len(total_complete)*0.75)+1:len(total_complete)]
-C = range(1,100,2)
+C = 0.0001,0.001,0.01,0.1,1,10,100,1000,10000
 allmetrics = dict()
-index = ['TP','FP','FN','TN']
+index = ['TP','FP','FN','TN','PRED_SCORE']
 df = pandas.DataFrame(index = index, columns = C)
+predictions = pandas.DataFrame(columns = C)
 
 for i in C:
     metrics = svmWorkFlow(train_data,true_train,test_data,true_test,C = i)
-    f[i] = metrics
-    df[i] = [metrics['TP'],metrics['FP'],metrics['FN'],metrics['TN']]
+    predictions[i] = metrics['predictions']
+    df[i] = [metrics['TP'],metrics['FP'],metrics['FN'],metrics['TN'],metrics['prediction_score']]
+    print(df[i])
 
 df.to_csv("./test.csv")
 #Accuracy
@@ -296,6 +305,49 @@ df.to_csv("./test.csv")
 #538 yes
 #3697 no
 
+# ------------------------------------------------
+# Classify Metastasis stage
+# ------------------------------------------------
+
+shuffledGrants = pandas.read_csv("shuffledGrants.csv")
+shuffledGrants = shuffledGrants[shuffledGrants['Metastasis_YN'] =='y']
+
+interval = int(len(shuffledGrants)/5)
+a = shuffledGrants['norm_TitleAbstract'][0:interval]
+b = shuffledGrants['norm_TitleAbstract'][interval+1:2*interval]
+c = shuffledGrants['norm_TitleAbstract'][2*interval+1:3*interval]
+d = shuffledGrants['norm_TitleAbstract'][3*interval+1:4*interval]
+e = shuffledGrants['norm_TitleAbstract'][4*interval+1:len(shuffledGrants)]
+
+a_result = shuffledGrants['Metastasis_stage'][0:interval]
+b_result = shuffledGrants['Metastasis_stage'][interval+1:2*interval]
+c_result = shuffledGrants['Metastasis_stage'][2*interval+1:3*interval]
+d_result = shuffledGrants['Metastasis_stage'][3*interval+1:4*interval]
+e_result = shuffledGrants['Metastasis_stage'][4*interval+1:len(shuffledGrants)]
+
+train_data = pandas.concat([a,b,c,d])
+true_train = pandas.concat([a_result,b_result,c_result,d_result])
+test_data = e
+true_test = e_result
+
+#train_data = total_complete[0:int(len(total_complete)*0.75)]
+#true_train = shuffledGrants['Metastasis_YN'][0:int(len(total_complete)*0.75)]
+#test_data = total_complete[int(len(total_complete)*0.75)+1:len(total_complete)]
+#true_test = shuffledGrants['Metastasis_YN'][int(len(total_complete)*0.75)+1:len(total_complete)]
+C = 1,5,10,50,100,500,1000,5000,10000
+allmetrics = dict()
+index = ['PRED_SCORE']
+df = pandas.DataFrame(index = index, columns = C)
+predictions = pandas.DataFrame(columns = C)
+
+for i in C:
+    metrics = randomForestWorkflow(train_data,true_train,test_data,true_test,C = i)
+    predictions[i] = metrics['predictions']
+    df[i] = metrics['score']
+    print(df[i])
+
+df.to_csv("./abcd.csv")
+predictions.to_csv("./abcd_predictions.csv")
 
 
 
