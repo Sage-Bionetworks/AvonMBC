@@ -116,46 +116,20 @@ def svmWorkFlow(train_data, true_train, test_data,true_test,
     training_features = tfidf_train.toarray() 
     test_features = tfidf_test.toarray()
     #SVM
-    svc = svm.SVC(C,kernel='linear')
+    svc = svm.SVC(C,kernel='linear',probability = True)
     svc.fit(training_features, true_train)  
     predictions = svc.predict(test_features)
-    prediction_score = svc.decision_function(test_features)
-    #Metrics Calculation confusion matrix AUC
-    #5-fold 
-    #Divide into 5 parts, and use different 4 training set, will get 5 different metrics
-    #Create a plot of the confusion matrix
-    #Loss function and penalty function
-    #Hinge loss, 
-    #Choose different c's (loss function)
+    #Get probability of each class and write to csv file
+    probs = svc.predict_proba(test_features)
+    prediction_score = pandas.DataFrame(probs)
+    prediction_score.to_csv("%s_svm_prob.csv" % C)
     print C
     print "Accuracy"
     print numpy.mean(predictions == true_test)
+    #Metrics Calculation confusion matrix AUC
     confusion = confusion_matrix(true_test,predictions)
     return dict(predictions = predictions,prediction_score = prediction_score, TP = confusion[0,0], FP = confusion[0,1], FN = confusion[1,0], TN = confusion[1,1])
 
-#linear regression
-def linearRegressionWorkFlow(train_data, true_train, test_data,true_test, 
-                vect__max_df=0.75,vect__max_features = 50000,vect__ngram_range = (1,2),
-                tfidf__use_idf = False,tfidf__norm='l2'):
-    vectorizer = CountVectorizer(max_df=vect__max_df,
-        max_features = vect__max_features, 
-        ngram_range = vect__ngram_range)
-    X_train = vectorizer.fit_transform(train_data)
-    X_test = vectorizer.transform(test_data)
-    #tfidf transformer
-    transformer = TfidfTransformer(norm = tfidf__norm,use_idf = tfidf__use_idf)
-    tfidf_train = transformer.fit_transform(X_train)
-    tfidf_test = transformer.transform(X_test)
-    #features_array = X.toarray()
-    training_features = tfidf_train.toarray() 
-    test_features = tfidf_test.toarray()
-    #SVM
-    clf = LogisticRegression(penalty='l1')
-    clf.fit(training_features, true_train)  
-    predictions = clf.predict(test_features)
-    print "Accuracy"
-    print numpy.mean(predictions == true_test)
-    return(predictions)
 
 def randomForestWorkflow(train_data, true_train, test_data,true_test,
                 C=1, 
@@ -192,12 +166,17 @@ def randomForestWorkflow(train_data, true_train, test_data,true_test,
     #features_array = X.toarray()
     training_features = tfidf_train.toarray()
     test_features = tfidf_test.toarray()
-    #SVM
-    clf = RandomForestClassifier(n_estimators=C)
+    #RF balanced weight adjusts weight proportional to class frequencies
+    clf = RandomForestClassifier(n_estimators=C,class_weight = 'balanced')
     clf.fit(training_features, true_train)
     predictions = clf.predict(test_features)
+    #get probability of each class
+    prob = clf.predict_proba(test_features)
+    prob = pandas.DataFrame(prob)
+    prob.to_csv("%s_rf_prob.csv" %C)
+
     score = clf.score(test_features,true_test)
-    return dict(predictions = predictions,score=score)
+    return dict(predictions = predictions,prob = prob,score=score)
 
 #----------------------------------------------------------------------
 # BENCHMARK
