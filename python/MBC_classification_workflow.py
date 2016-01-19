@@ -265,45 +265,39 @@ shuffledGrants['norm_TitleAbstract'] = total_complete
 
 shuffledGrants = pandas.read_csv("shuffledGrants.csv")
 
-interval = int(len(total_df)/5)
+interval = int(len(shuffledGrants)/5)
 a = shuffledGrants['norm_TitleAbstract'][0:interval]
-b = shuffledGrants['norm_TitleAbstract'][interval+1:2*interval]
-c = shuffledGrants['norm_TitleAbstract'][2*interval+1:3*interval]
-d = shuffledGrants['norm_TitleAbstract'][3*interval+1:4*interval]
-e = shuffledGrants['norm_TitleAbstract'][4*interval+1:len(total_complete)]
+b = shuffledGrants['norm_TitleAbstract'][interval:2*interval]
+c = shuffledGrants['norm_TitleAbstract'][2*interval:3*interval]
+d = shuffledGrants['norm_TitleAbstract'][3*interval:4*interval]
+e = shuffledGrants['norm_TitleAbstract'][4*interval:len(shuffledGrants)]
 
 a_result = shuffledGrants['Metastasis_YN'][0:interval]
-b_result = shuffledGrants['Metastasis_YN'][interval+1:2*interval]
-c_result = shuffledGrants['Metastasis_YN'][2*interval+1:3*interval]
-d_result = shuffledGrants['Metastasis_YN'][3*interval+1:4*interval]
-e_result = shuffledGrants['Metastasis_YN'][4*interval+1:len(total_complete)]
+b_result = shuffledGrants['Metastasis_YN'][interval:2*interval]
+c_result = shuffledGrants['Metastasis_YN'][2*interval:3*interval]
+d_result = shuffledGrants['Metastasis_YN'][3*interval:4*interval]
+e_result = shuffledGrants['Metastasis_YN'][4*interval:len(shuffledGrants)]
 
 train_data = pandas.concat([a,b,c,d])
 true_train = pandas.concat([a_result,b_result,c_result,d_result])
 test_data = e
 true_test = e_result
 
-#train_data = total_complete[0:int(len(total_complete)*0.75)]
-#true_train = shuffledGrants['Metastasis_YN'][0:int(len(total_complete)*0.75)]
-#test_data = total_complete[int(len(total_complete)*0.75)+1:len(total_complete)]
-#true_test = shuffledGrants['Metastasis_YN'][int(len(total_complete)*0.75)+1:len(total_complete)]
 C = 0.0001,0.001,0.01,0.1,1,10,100,1000,10000
 allmetrics = dict()
 index = ['TP','FP','FN','TN','PRED_SCORE']
 df = pandas.DataFrame(index = index, columns = C)
 predictions = pandas.DataFrame(columns = C)
-
+pred_score = pandas.DataFrame(columns =C)
 for i in C:
     metrics = svmWorkFlow(train_data,true_train,test_data,true_test,C = i)
     predictions[i] = metrics['predictions']
-    df[i] = [metrics['TP'],metrics['FP'],metrics['FN'],metrics['TN'],metrics['prediction_score']]
+    df[i] = [metrics['TP'],metrics['FP'],metrics['FN'],metrics['TN']]
     print(df[i])
 
-df.to_csv("./test.csv")
-#Accuracy
-#0.953719008264!
-#538 yes
-#3697 no
+df.to_csv("./abcd.csv")
+predictions.to_csv("./abcd_predictions.csv")
+
 
 # ------------------------------------------------
 # Classify Metastasis stage
@@ -314,26 +308,22 @@ shuffledGrants = shuffledGrants[shuffledGrants['Metastasis_YN'] =='y']
 
 interval = int(len(shuffledGrants)/5)
 a = shuffledGrants['norm_TitleAbstract'][0:interval]
-b = shuffledGrants['norm_TitleAbstract'][interval+1:2*interval]
-c = shuffledGrants['norm_TitleAbstract'][2*interval+1:3*interval]
-d = shuffledGrants['norm_TitleAbstract'][3*interval+1:4*interval]
-e = shuffledGrants['norm_TitleAbstract'][4*interval+1:len(shuffledGrants)]
+b = shuffledGrants['norm_TitleAbstract'][interval:2*interval]
+c = shuffledGrants['norm_TitleAbstract'][2*interval:3*interval]
+d = shuffledGrants['norm_TitleAbstract'][3*interval:4*interval]
+e = shuffledGrants['norm_TitleAbstract'][4*interval:len(shuffledGrants)]
 
 a_result = shuffledGrants['Metastasis_stage'][0:interval]
-b_result = shuffledGrants['Metastasis_stage'][interval+1:2*interval]
-c_result = shuffledGrants['Metastasis_stage'][2*interval+1:3*interval]
-d_result = shuffledGrants['Metastasis_stage'][3*interval+1:4*interval]
-e_result = shuffledGrants['Metastasis_stage'][4*interval+1:len(shuffledGrants)]
+b_result = shuffledGrants['Metastasis_stage'][interval:2*interval]
+c_result = shuffledGrants['Metastasis_stage'][2*interval:3*interval]
+d_result = shuffledGrants['Metastasis_stage'][3*interval:4*interval]
+e_result = shuffledGrants['Metastasis_stage'][4*interval:len(shuffledGrants)]
 
 train_data = pandas.concat([a,b,c,d])
 true_train = pandas.concat([a_result,b_result,c_result,d_result])
 test_data = e
 true_test = e_result
 
-#train_data = total_complete[0:int(len(total_complete)*0.75)]
-#true_train = shuffledGrants['Metastasis_YN'][0:int(len(total_complete)*0.75)]
-#test_data = total_complete[int(len(total_complete)*0.75)+1:len(total_complete)]
-#true_test = shuffledGrants['Metastasis_YN'][int(len(total_complete)*0.75)+1:len(total_complete)]
 C = 1,5,10,50,100,500,1000,5000,10000
 allmetrics = dict()
 index = ['PRED_SCORE']
