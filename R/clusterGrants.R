@@ -1,15 +1,16 @@
 library(tm)
-skipWords <- function(x) removeWords(x, c(stopwords('english'),"abil","across","releas","accompani","chang","surprisingly",
-                                          "accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
-                                          "conjug","capabl","candid","day","alon","basi","account","event","annot",
-                                          "thought","applic","appli","longer","infer","cohort","assess","certain",
-                                          "convent","baselin","associ","area","caspas","affect","adjust","adjuv",
-                                          "ultim","time","dual","cannon","copi","address","anim","aris","capac",
-                                          "amount","common","administ","adjac","addit","play","indeed","distribut",
-                                          "presenc","collectively","dure","calcul","childhood","along","additionally",
-                                          "comprehens","discov","side","within","global","construct","depend","aberr",
-                                          "accord","safeti","abund","administr","combin","angiogenesi","best","acquir",
-                                          "activ","allow","specif"))
+skipWords <- function(x) removeWords(x, c(stopwords('english')))
+                                          #"abil","across","releas","accompani","chang","surprisingly",
+                                          #"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
+                                          #"conjug","capabl","candid","day","alon","basi","account","event","annot",
+                                          #"thought","applic","appli","longer","infer","cohort","assess","certain",
+                                          #"convent","baselin","associ","area","caspas","affect","adjust","adjuv",
+                                          #"ultim","time","dual","cannon","copi","address","anim","aris","capac",
+                                          #"amount","common","administ","adjac","addit","play","indeed","distribut",
+                                          #"presenc","collectively","dure","calcul","childhood","along","additionally",
+                                          #"comprehens","discov","side","within","global","construct","depend","aberr",
+                                          #"accord","safeti","abund","administr","combin","angiogenesi","best","acquir",
+                                          #"activ","allow","specif"))
 
 concatenate_and_split_hyphens <- function(x){gsub("\\s(\\w+)-(\\w+)\\s"," \\1\\2 \\1 \\2 ",x)}
 removeAloneNumbers <- function(x){gsub("\\s\\d+\\s","", x)}
@@ -48,25 +49,39 @@ makeDTM_abstract <- function(textVec){
   
   dtm <- DocumentTermMatrix(corpus, control = list(weighting = function(x) weightTfIdf(x, normalize = TRUE)))
   word.freq <- as.numeric(as.array(slam::rollup(dtm, 1, FUN=function(x) { sum(x > 0)})) )
-  a=18
-  dtm.sub <- dtm[, word.freq >a] # this freq is the number of documents containing this term, whereas the freq below is the weight in the dtm
-  while (dtm.sub$ncol <1000) {
-    a=a-1
-    dtm.sub <- dtm[, word.freq >a]
-  }
-  if (a==1) {
-    dtm.sub <- dtm[, word.freq >2]
-  }  
-  return(dtm.sub)
+  a=2
+  dtm.sub <- dtm[, word.freq >a]
 }
 
 
+load("../AvonMBCShiny/allGrants.Rdata")
 
-text <- paste(grant.df$AwardTitle,grant.df$TechAbstract)
-ff <- as.vector(text)
+
+grant.MBC <- grant.df[grant.df$Metastasis_YN == 'yes',]
+rm(grant.df)
+text <- paste(grant.MBC$AwardTitle,grant.MBC$TechAbstract)
+textRownames <- paste0("MBC__",grant.MBC$AwardCode)
+rm(grant.MBC)
+
+sanantoniotext <- paste(sanantonio$title, sanantonio$body1)
+sanantonioRownames <- sanantonio$control
+rm(sanantonio)
+
+
+final <- c(text, sanantoniotext)
+ff <- as.vector(final)
+rm(final)
 ff<-toAmericanEnglish(ff)
 d <- makeDTM_abstract(ff)
+rm(ff)
 temp<- as.matrix(d)
-row.names(temp) = seq_along(text)
-h<- hclust(dist(temp),method="ward.D2")
+rm(d)
+row.names(temp) = c(textRownames,sanantonioRownames)
+rm(textRownames)
+rm(sanantonioRownames)
+distances <-as.matrix(dist(temp))
+top <- paste(row.names(temp)[order(distances[1:nrow(distances)])][2:21],collapse = ",")
+rm(distances)
+rm(temp)
+
 
