@@ -29,7 +29,7 @@ from nltk import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 #nltk.download("stopwords")
-import pandas
+import pandas as pd
 import string
 import re
 from time import time
@@ -38,7 +38,7 @@ import logging
 #pip install Beautifulsoup4
 from bs4 import BeautifulSoup
 import unicodedata 
-import numpy
+import numpy as np
 import pprint
 from random import shuffle
 #Get common functions
@@ -52,7 +52,7 @@ from common_functions import *
 #Normalization of text (Remove HTML, replace non-ascii characters, remove punctuation,
 #remove lone numbers, stem words, remove stop words recombine into text)
 #--------------------------------------------------------------------------------------
-grants = pandas.read_csv('metastatic_grant_binary.csv')
+grants = pd.read_csv('metastatic_grant_binary.csv')
 total = grants['AwardTitle'] + ", " + grants['TechAbstract']
 
 total_complete = normalize_text(total)
@@ -251,10 +251,15 @@ svmWorkFlow(train_data, true_train, test_data,true_test)
 # Accuracy
 # 54%
 
-
-# ------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 # classify Metastasis Y/N
-# ------------------------------------------
+# ------------------------------------------------------------------------------------
+
 grants = pandas.read_csv('ICRP_allcombined_grants.csv')
 shuffledGrants = grants.reindex(numpy.random.permutation(grants.index))
 shuffledGrants['TitleAbstract'] = shuffledGrants['AwardTitle'] + ", " + shuffledGrants['TechAbstract']

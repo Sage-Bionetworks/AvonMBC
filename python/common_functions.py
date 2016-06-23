@@ -1,3 +1,46 @@
+#Creates features
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn import svm
+
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.linear_model import RidgeClassifier
+from sklearn.svm import LinearSVC
+from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import Perceptron
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.naive_bayes import BernoulliNB, MultinomialNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import NearestCentroid
+from sklearn.utils.extmath import density
+from sklearn import metrics
+from sklearn.grid_search import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+
+#NLTK -> tokenizer, stemmer
+import nltk
+from nltk.collocations import *
+from nltk import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
+#nltk.download("stopwords")
+import pandas as pd
+import string
+import re
+from time import time
+import logging
+#Beautiful soup -> Gets rid of HTML and replaces non ascii characters
+#pip install Beautifulsoup4
+from bs4 import BeautifulSoup
+import unicodedata 
+import numpy as np
+import pprint
+from random import shuffle
 # -------------------------------------------------------------------------------
 # Normalization of text
 # -------------------------------------------------------------------------------

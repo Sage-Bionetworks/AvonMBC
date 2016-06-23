@@ -1,4 +1,6 @@
 library(tm)
+library(synapseClient)
+synapseLogin()
 skipWords <- function(x) removeWords(x, c(stopwords('english')))
                                           #"abil","across","releas","accompani","chang","surprisingly",
                                           #"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
@@ -55,6 +57,8 @@ makeDTM_abstract <- function(textVec){
 
 
 load("../AvonMBCShiny/allGrants.Rdata")
+grantdf.Rdata <- synGet("syn5574249")
+load(grantdf.Rdata@filePath)
 
 
 grant.MBC <- grant.df[grant.df$Metastasis_YN == 'yes',]
@@ -77,11 +81,17 @@ rm(ff)
 temp<- as.matrix(d)
 rm(d)
 row.names(temp) = c(textRownames,sanantonioRownames)
-rm(textRownames)
-rm(sanantonioRownames)
 distances <-as.matrix(dist(temp))
-top <- paste(row.names(temp)[order(distances[1:nrow(distances)])][2:21],collapse = ",")
 rm(distances)
 rm(temp)
 
+write.csv(temp,file = "AvonDistance_matrix.csv")
+
+row.names(distances) = c(textRownames,sanantonioRownames)
+write.csv(distances,"MBC_sanAntonio_distances.csv")
+
+dist_MBC = apply(distances[1:length(textRownames),], 1, function(x) {
+  #print(x[4910:length(x)][order(x[4910:length(x)])])
+  paste(sanantonioRownames[order(x[length(textRownames)+1:length(x)])][1:20],collapse=",")
+})
 
