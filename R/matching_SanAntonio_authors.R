@@ -1,16 +1,10 @@
-library(synapseClient)
-synapseLogin()
-path = synGet("syn5574249")
-load(path@filePath)
-
-authors = read.csv("documents/SABCS_2008-2012_AUTHORS.csv",stringsAsFactors = F)
-#grants = read.csv("documents/ICRP_allcombined_grants.csv",stringsAsFactors = F)
-grants = read.csv("documents/MetCancer_Additional_Data_Feb2016_sub.csv", stringsAsFactors = F)
-#15212 - 18322
-
-matchingAuthors <- function(grants, authors) {
-  abstractauthors = paste(authors$au_fname, authors$au_lname)
-  grantauthors = paste(grants$PIFirstName, grants$PILastName)
+library(xlsx)
+#authors = read.csv("documents/SABCS_2008-2012_AUTHORS.csv",stringsAsFactors = F)
+matchingAuthors <- function(grantPath, authorsPath, SAAuthorFile) {
+  authors <- read.xlsx(authorsPath,sheetIndex=1)
+  grants <- read.xlsx(grantPath,sheetIndex = 1)
+  abstractauthors <- paste(authors$au_fname, authors$au_lname)
+  grantauthors <- paste(grants$PIFirstName, grants$PILastName)
   
   abstractauthors <- gsub("[[:punct:]]","",abstractauthors)
   grantauthors <- gsub("[[:punct:]]","",grantauthors)
@@ -26,7 +20,8 @@ matchingAuthors <- function(grants, authors) {
   })
   rm(authors)
   rm(grants)
-  
-  grant.df$SanAntonio_Abstracts[15212:18322] = unname(controls)
-  save(grant.df,highlight.keywords,sanantonio, file = path@filePath)
+  write.csv(unname(controls),file=SAAuthorFile)
 }
+
+args <- commandArgs(trailingOnly = TRUE)
+geneList <- matchingAuthors(args[1], args[2], args[3])

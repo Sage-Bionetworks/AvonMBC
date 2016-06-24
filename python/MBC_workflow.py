@@ -48,7 +48,7 @@ import synapseclient
 
 # R files
 import rpy2.robjects as robjects
-
+import os
 
 # -------------------------------------------------------------------------------
 # Normalization of text
@@ -189,6 +189,11 @@ def geneList_matching(testPath, geneListPath):
     updateGeneList = robjects.r('updateGeneList')
     updateGeneList(testPath, geneListPath)
 
+def SAAuthorMatching(testPath, SAAuthorPath):
+    robjects.r("source('R/matching_SanAntonio_authors.R')")
+    matchSAAuthors = robjects.r('matchingAuthors')
+
+
 
 if __name__ == "__main__":
 
@@ -214,7 +219,8 @@ if __name__ == "__main__":
     training_ent = syn.get("syn6136723")
     training = pd.read_csv(training_ent.path)
     geneList_ent = syn.get("syn5594707")
-    geneList = pd.read_csv(geneList_ent.path,sep="\t")
+    #geneList = pd.read_csv(geneList_ent.path,sep="\t")
+    SAauthors_ent = syn.get("syn5588033")
     null_training = training[training['Metastasis_stage'].isnull()]
     temp = syn.query('select id,name,run from file where parentId == "syn6047020"')
     for i in temp['results']:
@@ -231,6 +237,9 @@ if __name__ == "__main__":
             for col in extras:
                 test[col] = ''
             metaYN = []
+            #########################################################
+            #### Determine if MBC related
+            #########################################################
             for score in test['Breast_Cancer']:
                 if score>=50:
                     metaYN.append("yes")
@@ -238,19 +247,34 @@ if __name__ == "__main__":
                     metaYN.append("no")
             test['Metastasis_YN'] = metaYN
             test['Metastasis_stage'] = "Auto Generated"
+            #########################################################
+            #### Classify MBC stage
+            #########################################################
             probs, prediction = classify_MBC_Stage(training, test)
             probs.columns = stage_prob
             for i in stage_prob:
                 test[i] = probs[i]
             test['Predicted_metastage'] = prediction
             test['Predicted_metastage'][test['Metastasis_YN'] == "no"] = "Not relevant"
-
+            #########################################################
+            #### Matching Gene List
+            #########################################################
+            matchedGenePath = "matchedGeneList.csv"
             #matched_genes = geneList_matching(test_ent.path, geneList_ent.path)
-            os.system("Rscipt geneList_matching.R %s %s" % (test_ent.path, geneList_ent.path)) #pass in arguments to the R script
-            test['gene_list'] = matched_genes
+            os.system("Rscript ../R/geneList_matching.R %s %s %s" % (test_ent.path, geneList_ent.path, matchedGenePath)) #pass in arguments to the R script
+            matched_genes = pd.read_csv(matchedGenePath)
+            test['gene_list'] = matched_genes['x']
+            #########################################################
+            #### Matching SA Authors
+            #########################################################
+            matchedSAAuthorPath = "matchedSAAuthor.csv"
+            os.system("Rscript ../R/matching_SanAntonio_authors.R %s %s %s" % (test_ent.path, SAauthors_ent.path, matchedSAAuthorPath) )
+            matched_SAauthors = pd.read_csv(matchedSAAuthorPath)
+            test['SanAntonio_Abstracts'] = matched_SAauthors['x']
+            
 
             test_ent.run = "completed"
-            syn.store(test_end)
+            syn.store(test_ent)
 
 
 
