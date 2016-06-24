@@ -245,7 +245,8 @@ if __name__ == "__main__":
             test['Predicted_metastage'] = prediction
             test['Predicted_metastage'][test['Metastasis_YN'] == "no"] = "Not relevant"
 
-            matched_genes = geneList_matching(test_ent.path, geneList_ent.path)
+            #matched_genes = geneList_matching(test_ent.path, geneList_ent.path)
+            os.system("Rscipt geneList_matching.R %s %s" % (test_ent.path, geneList_ent.path)) #pass in arguments to the R script
             test['gene_list'] = matched_genes
 
             test_ent.run = "completed"

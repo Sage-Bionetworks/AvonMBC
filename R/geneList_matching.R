@@ -2,9 +2,11 @@ library(parallel)
 library(stringr)
 require(Hmisc)
 library(xlsx)
+#library(synapseClient)
+
+
 updateGeneList <- function(grantFile, geneFile) {
   grant.df <- read.xlsx(grantFile,sheetIndex = 1)
-  #grant.df <- grantFile
   hgnc_genes <- read.csv(geneFile,sep="\t",stringsAsFactors = F)
   gene_info <- paste(hgnc_genes$symbol,hgnc_genes$alias_symbol,sep="|")
   gene_info <- strsplit(gene_info, split = "|",fixed=T)
@@ -27,3 +29,9 @@ updateGeneList <- function(grantFile, geneFile) {
   write.csv(geneList, file="./new_genelist.csv")
   geneList
 }
+
+#synapseLogin()
+#geneList_ent <- synGet("syn5594707")
+#test_ent = synGet("syn6172301")
+args <- commandArgs(trailingOnly = TRUE)
+geneList <- updateGeneList(args[1], args[2])
