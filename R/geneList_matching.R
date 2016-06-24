@@ -24,5 +24,6 @@ updateGeneList <- function(grantFile, geneFile) {
     paste(unlist(temp),collapse="\n")
 
   })
+  write.csv(geneList, file="./new_genelist.csv")
   geneList
 }
