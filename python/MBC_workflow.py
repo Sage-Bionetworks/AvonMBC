@@ -46,6 +46,10 @@ import argparse
 import synapseclient
 
 
+# R files
+import rpy2.robjects as robjects
+
+
 # -------------------------------------------------------------------------------
 # Normalization of text
 # -------------------------------------------------------------------------------
@@ -143,17 +147,16 @@ def randomForestWorkflow(train_data, true_train, test_data,true_test=None,
 # ------------------------------------------------
 
 def classify_MBC_Stage(training, test,nTrees=100):
-    training = training[training['Metastasis_stage'].isin(['Arrest & extravasation',
-                                         'Immune surveillance/escape',
-                                         'Intravasation & circulation',
-                                         'Invasion',
-                                         'Metabolic deregulation',
-                                         'Metastatic colonization',
-                                         'Not relevant'])]
+    stages = ['Arrest & extravasation','Immune surveillance/escape',
+            'Intravasation & circulation','Invasion',
+            'Metabolic deregulation','Metastatic colonization']
+    stage_prob = ['arrest_meta','immune_meta','intravasatsion_meta','invasion_meta',
+                'metabolic_meta','metastatic_meta']
+    training = training[training['Metastasis_stage'].isin(stages)]
 
     training_text = training['AwardTitle'] + ", " + training['TechAbstract']
     test_text = test['AwardTitle'] + ", " + test['TechAbstract']
-    #training[training['Metastasis_stage'].isin(['Arrest & extravasation','Immune surveillance/escape','Intravasation & circulation','Invasion','Metabolic deregulation','Metastatic colonization','invasion'])]
+
     print("NORMALIZING TEXT")
     training_text = normalize_text(training_text,removeNumbers = False, stemDocument = False )
     test_text = normalize_text(test_text, removeNumbers = False, stemDocument = False )
@@ -161,7 +164,7 @@ def classify_MBC_Stage(training, test,nTrees=100):
     #C = 1,5,10,50,100,500,1000,5000,10000
     #allmetrics = dict()
     index = ['PRED_SCORE']
-    probs = pd.DataFrame(columns = [nTrees])
+    #probs = pd.DataFrame(columns = [nTrees])
     predictions = pd.DataFrame(columns = [nTrees])
     print("RANDOM FOREST")
     #for i in C:
@@ -169,15 +172,22 @@ def classify_MBC_Stage(training, test,nTrees=100):
     predictions[nTrees] = metrics['predictions']
     probs = metrics['prob']
     print("POSTERIOR PROBABILITY")
-    print(probs[nTrees])
+    print(probs)
     print("PREDICTIONS")
     print(predictions[nTrees])
-    probs.to_csv("./meta_stage_probability")
+    probs.to_csv("./meta_stage_probability.csv")
     predictions.to_csv("./meta_stage_predictions.csv")
+    return(probs, predictions)
+
 
 def call_stage(args):
     classify_MBC_Stage(args.training,args.test)
 
+
+def geneList_matching(testPath, geneListPath):
+    robjects.r("source('R/geneList_matching.R')")
+    updateGeneList = robjects.r('updateGeneList')
+    updateGeneList(testPath, geneListPath)
 
 
 if __name__ == "__main__":
@@ -203,6 +213,8 @@ if __name__ == "__main__":
     syn = synapseclient.login()
     training_ent = syn.get("syn6136723")
     training = pd.read_csv(training_ent.path)
+    geneList_ent = syn.get("syn5594707")
+    geneList = pd.read_csv(geneList_ent.path,sep="\t")
     null_training = training[training['Metastasis_stage'].isnull()]
     temp = syn.query('select id,name,run from file where parentId == "syn6047020"')
     for i in temp['results']:
@@ -226,9 +238,18 @@ if __name__ == "__main__":
                     metaYN.append("no")
             test['Metastasis_YN'] = metaYN
             test['Metastasis_stage'] = "Auto Generated"
+            probs, prediction = classify_MBC_Stage(training, test)
+            probs.columns = stage_prob
+            for i in stage_prob:
+                test[i] = probs[i]
+            test['Predicted_metastage'] = prediction
+            test['Predicted_metastage'][test['Metastasis_YN'] == "no"] = "Not relevant"
 
-            classify_MBC_Stage(training, test)
+            matched_genes = geneList_matching(test_ent.path, geneList_ent.path)
+            test['gene_list'] = matched_genes
+
             test_ent.run = "completed"
+            syn.store(test_end)
 
 
 
