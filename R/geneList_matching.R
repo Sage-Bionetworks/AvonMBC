@@ -20,7 +20,7 @@ updateGeneList <- function(grantFile, geneFile) {
       if (length(grep(paste0("\\<", x,"\\>"),words)) >0) {
         x
       }
-    })
+    },mc.cores=3)
     paste(unlist(temp),collapse="\n")
 
   })
