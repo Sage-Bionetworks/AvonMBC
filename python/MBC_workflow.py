@@ -221,6 +221,7 @@ if __name__ == "__main__":
     geneList_ent = syn.get("syn5594707")
     #geneList = pd.read_csv(geneList_ent.path,sep="\t")
     SAauthors_ent = syn.get("syn5588033")
+    SAdist_ent = syn.get("syn5587972")
     null_training = training[training['Metastasis_stage'].isnull()]
     temp = syn.query('select id,name,run from file where parentId == "syn6047020"')
     for i in temp['results']:
@@ -275,9 +276,9 @@ if __name__ == "__main__":
             #########################################################
             #### Matching SA Distance
             #########################################################
-            matchedSAAuthorPath = "matchedSADist.csv"
-            os.system("Rscript ../R/clusterGrants.R %s %s %s" % (test_ent.path, SAauthors_ent.path, matchedSAAuthorPath) )
-            matched_SAauthors = pd.read_csv(matchedSAAuthorPath)
+            matchedSADistPath = "matchedSADist.csv"
+            os.system("Rscript ../R/clusterGrants.R %s %s %s" % (test_ent.path, SAdist_ent.path, matchedSADistPath) )
+            matchedSADist = pd.read_csv(matchedSADistPath)
             test['SanAntonio_Abstracts'] = matched_SAauthors['x']
             test_ent.run = "completed"
             syn.store(test_ent)
