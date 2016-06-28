@@ -1,6 +1,5 @@
 library(tm)
-library(synapseClient)
-synapseLogin()
+
 skipWords <- function(x) removeWords(x, c(stopwords('english')))
                                           #"abil","across","releas","accompani","chang","surprisingly",
                                           #"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
@@ -56,42 +55,35 @@ makeDTM_abstract <- function(textVec){
 }
 
 
-load("../AvonMBCShiny/allGrants.Rdata")
-grantdf.Rdata <- synGet("syn5574249")
-load(grantdf.Rdata@filePath)
+distAuthors <- function(grantPath, SAAbstracts, SADistFile) {
+  sanantonio <- read.xlsx(SAAbstracts,sheetIndex=1)
+  grant.df <- read.xlsx(grantPath,sheetIndex = 1)
+
+  grant.MBC <- grant.df[grant.df$Metastasis_YN == 'yes',]
+  #rm(grant.df)
+  text <- paste(grant.MBC$AwardTitle,grant.MBC$TechAbstract)
+  textRownames <- paste0("MBC__",grant.MBC$AwardCode)
+  #rm(grant.MBC)
+  sanantoniotext <- paste(sanantonio$title, sanantonio$body1)
+  sanantonioRownames <- sanantonio$control
+  #rm(sanantonio)
+  distances <- lapply(seq_along(text), function(i) {
+    final <- c(text[i], sanantoniotext)
+    ff <- as.vector(final)
+    #rm(final)
+    ff<-toAmericanEnglish(ff)
+    d <- makeDTM_abstract(ff)
+    #rm(ff)
+    temp<- as.matrix(d)
+    row.names(temp) = c(textRownames[i],sanantonioRownames)
+    temp <- t(temp)
+    temp_cor <- cor(temp)
+    paste(sanantonioRownames[order(temp_cor[,1][-1],decreasing = T)[1:20]],collapse=",")
+  })
+  write.csv(unlist(distances),file=SADistFile)
+}
 
 
-grant.MBC <- grant.df[grant.df$Metastasis_YN == 'yes',]
-rm(grant.df)
-text <- paste(grant.MBC$AwardTitle,grant.MBC$TechAbstract)
-textRownames <- paste0("MBC__",grant.MBC$AwardCode)
-rm(grant.MBC)
-
-sanantoniotext <- paste(sanantonio$title, sanantonio$body1)
-sanantonioRownames <- sanantonio$control
-rm(sanantonio)
-
-
-final <- c(text, sanantoniotext)
-ff <- as.vector(final)
-rm(final)
-ff<-toAmericanEnglish(ff)
-d <- makeDTM_abstract(ff)
-rm(ff)
-temp<- as.matrix(d)
-rm(d)
-row.names(temp) = c(textRownames,sanantonioRownames)
-distances <-as.matrix(dist(temp))
-rm(distances)
-rm(temp)
-
-write.csv(temp,file = "AvonDistance_matrix.csv")
-
-row.names(distances) = c(textRownames,sanantonioRownames)
-write.csv(distances,"MBC_sanAntonio_distances.csv")
-
-dist_MBC = apply(distances[1:length(textRownames),], 1, function(x) {
-  #print(x[4910:length(x)][order(x[4910:length(x)])])
-  paste(sanantonioRownames[order(x[length(textRownames)+1:length(x)])][1:20],collapse=",")
-})
+args <- commandArgs(trailingOnly = TRUE)
+SADist <- distAuthors(args[1], args[2], args[3])
 

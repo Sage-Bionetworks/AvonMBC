@@ -271,17 +271,21 @@ if __name__ == "__main__":
             os.system("Rscript ../R/matching_SanAntonio_authors.R %s %s %s" % (test_ent.path, SAauthors_ent.path, matchedSAAuthorPath) )
             matched_SAauthors = pd.read_csv(matchedSAAuthorPath)
             test['SanAntonio_Abstracts'] = matched_SAauthors['x']
-            
 
+            #########################################################
+            #### Matching SA Distance
+            #########################################################
+            matchedSAAuthorPath = "matchedSADist.csv"
+            os.system("Rscript ../R/clusterGrants.R %s %s %s" % (test_ent.path, SAauthors_ent.path, matchedSAAuthorPath) )
+            matched_SAauthors = pd.read_csv(matchedSAAuthorPath)
+            test['SanAntonio_Abstracts'] = matched_SAauthors['x']
             test_ent.run = "completed"
             syn.store(test_ent)
 
 
 
 
-#### Clean abstracts of html tags
-#### Call metastage classifier
 #### Call MBC classifier
 #### Distance metric with SA abstracts
-#### Match gene list
+
 
