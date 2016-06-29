@@ -184,16 +184,24 @@ def call_stage(args):
     classify_MBC_Stage(args.training,args.test)
 
 
-def geneList_matching(testPath, geneListPath):
-    robjects.r("source('R/geneList_matching.R')")
-    updateGeneList = robjects.r('updateGeneList')
-    updateGeneList(testPath, geneListPath)
+#def geneList_matching(testPath, geneListPath):
+#    robjects.r("source('R/geneList_matching.R')")
+#    updateGeneList = robjects.r('updateGeneList')
+#    updateGeneList(testPath, geneListPath)
 
-def SAAuthorMatching(testPath, SAAuthorPath):
-    robjects.r("source('R/matching_SanAntonio_authors.R')")
-    matchSAAuthors = robjects.r('matchingAuthors')
+#def SAAuthorMatching(testPath, SAAuthorPath):
+#    robjects.r("source('R/matching_SanAntonio_authors.R')")
+#    matchSAAuthors = robjects.r('matchingAuthors')
 
-
+def removeascii(text):
+    text[text.isnull()] = ''
+    temp = []
+    for i in text:
+        if type(i) == unicode:
+            temp.append(unicodedata.normalize('NFKD', i).encode('ascii','ignore'))
+        else:
+            temp.append(i)
+    return(temp)
 
 if __name__ == "__main__":
 
@@ -220,14 +228,34 @@ if __name__ == "__main__":
     training = pd.read_csv(training_ent.path)
     geneList_ent = syn.get("syn5594707")
     #geneList = pd.read_csv(geneList_ent.path,sep="\t")
+
+    ##################################################
+    ## Prepare San antonio Abstracts
+    ##################################################
     SAauthors_ent = syn.get("syn5588033")
+    SAauthors = pd.read_excel(SAauthors_ent.path)
+    #SAauthors = SAauthors.apply(removeascii, axis=0)
+    SAauthorsPath = SAauthors_ent.path.strip("xlsx") + "csv"
+    SAauthors.to_csv(SAauthorsPath, index=False)
+
     SAdist_ent = syn.get("syn5587972")
+    SAdist = pd.read_excel(SAdist_ent.path)
+    SAdist = SAdist.apply(removeascii, axis=0)
+    SAdistPath = SAdist_ent.path.strip("xlsx") + "csv"
+    SAdist.to_csv(SAdistPath, index=False)
+    ##################################################
+    ##################################################
+
     null_training = training[training['Metastasis_stage'].isnull()]
     temp = syn.query('select id,name,run from file where parentId == "syn6047020"')
     for i in temp['results']:
         if i['file.run'] is None:
+            #########################################################
+            #### Prepare Test Entities
+            #########################################################
             test_ent = syn.get(i['file.id'])
             test = pd.read_excel(test_ent.path)
+
             names = test.columns.values
             for index,name in enumerate(names):
                 name = re.sub(" ","_",name)
@@ -237,10 +265,13 @@ if __name__ == "__main__":
             extras = training.columns[~training.columns.isin(test.columns)]
             for col in extras:
                 test[col] = ''
-            metaYN = []
+            test = test.apply(removeascii, axis=0)
+            testPath = test_ent.path.strip("xlsx")  + "csv"
+            test.to_csv(testPath,index=False)
             #########################################################
             #### Determine if MBC related
             #########################################################
+            metaYN = []
             for score in test['Breast_Cancer']:
                 if score>=50:
                     metaYN.append("yes")
@@ -262,14 +293,14 @@ if __name__ == "__main__":
             #########################################################
             matchedGenePath = "matchedGeneList.csv"
             #matched_genes = geneList_matching(test_ent.path, geneList_ent.path)
-            os.system("Rscript ../R/geneList_matching.R %s %s %s" % (test_ent.path, geneList_ent.path, matchedGenePath)) #pass in arguments to the R script
+            os.system("Rscript ../R/geneList_matching.R %s %s %s" % (testPath, geneList_ent.path, matchedGenePath)) #pass in arguments to the R script
             matched_genes = pd.read_csv(matchedGenePath)
             test['gene_list'] = matched_genes['x']
             #########################################################
             #### Matching SA Authors
             #########################################################
             matchedSAAuthorPath = "matchedSAAuthor.csv"
-            os.system("Rscript ../R/matching_SanAntonio_authors.R %s %s %s" % (test_ent.path, SAauthors_ent.path, matchedSAAuthorPath) )
+            os.system("Rscript ../R/matching_SanAntonio_authors.R %s %s %s" % (testPath, SAauthorsPath, matchedSAAuthorPath) )
             matched_SAauthors = pd.read_csv(matchedSAAuthorPath)
             test['SanAntonio_Abstracts'] = matched_SAauthors['x']
 
@@ -277,11 +308,17 @@ if __name__ == "__main__":
             #### Matching SA Distance
             #########################################################
             matchedSADistPath = "matchedSADist.csv"
-            os.system("Rscript ../R/clusterGrants.R %s %s %s" % (test_ent.path, SAdist_ent.path, matchedSADistPath) )
+            os.system("Rscript ../R/clusterGrants.R %s %s %s" % (testPath, SAdistPath, matchedSADistPath) )
             matchedSADist = pd.read_csv(matchedSADistPath)
             test['SanAntonio_Abstracts'] = matched_SAauthors['x']
+            
+
+
+
+
             test_ent.run = "completed"
             syn.store(test_ent)
+
 
 
 
