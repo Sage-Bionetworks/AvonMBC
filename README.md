@@ -1,5 +1,12 @@
 # AvonMBC
-###Matching annotations
+
+## New workflow
+1. Run python/installPkgs.sh
+2. Run python/MBC_workflow.py
+
+## Old workflow
+
+### Matching annotations
 **Matching_annotations.R**
 
 Extracting all the human annotated terms for annotation category: 
@@ -17,7 +24,7 @@ Match extracted terms to grant abstract and title
 
 Compare these matched terms to the actual annotations
 
-###Normilization
+### Normilization
 **test_normalization.R**
 ```
 library(tm)
@@ -31,3 +38,5 @@ Create document term matrix and normalize grants:
 * remove stop words
 
 Try [RTextTools](http://journal.r-project.org/archive/2013-1/collingwood-jurka-boydstun-etal.pdf) algorithms with "pathway" annotation
+
+
