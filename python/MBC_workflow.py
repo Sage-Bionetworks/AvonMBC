@@ -203,25 +203,26 @@ def removeascii(text):
             temp.append(i)
     return(temp)
 
-if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='MBC workflow')
+def main():
 
-    subparsers = parser.add_subparsers(title='commands',
-            description='The following commands are available:')
+    # parser = argparse.ArgumentParser(description='MBC workflow')
 
-    #Update beatAML project
-    parser_stage = subparsers.add_parser('predictStage',
-            help='Predict metastatic stage')
-    parser_stage.add_argument('--training',  metavar='training.txt', type=str, required=True,
-            help='File that contains training data'),
-    parser_stage.add_argument('--test', metavar='test.txt', type=str, required=True,
-            help='File that contains testing data')
-    parser_stage.set_defaults(func=call_stage)
+    # subparsers = parser.add_subparsers(title='commands',
+    #         description='The following commands are available:')
 
-    #Parse args
-    args = parser.parse_args()
-    perform_main(args)
+    # #Update beatAML project
+    # parser_stage = subparsers.add_parser('predictStage',
+    #         help='Predict metastatic stage')
+    # parser_stage.add_argument('--training',  metavar='training.txt', type=str, required=True,
+    #         help='File that contains training data'),
+    # parser_stage.add_argument('--test', metavar='test.txt', type=str, required=True,
+    #         help='File that contains testing data')
+    # parser_stage.set_defaults(func=call_stage)
+
+    # #Parse args
+    # args = parser.parse_args()
+    # perform_main(args)
 
     syn = synapseclient.login()
     training_ent = syn.get("syn6136723")
@@ -312,18 +313,13 @@ if __name__ == "__main__":
             matchedSADist = pd.read_csv(matchedSADistPath)
             test['SanAntonio_Abstracts'] = matched_SAauthors['x']
             
-
-
+            test.to_csv(testPath,index=False)
 
 
             test_ent.run = "completed"
             syn.store(test_ent)
 
 
-
-
-
-#### Call MBC classifier
-#### Distance metric with SA abstracts
-
+if __name__ == "__main__":
+    main()
 
