@@ -1,17 +1,18 @@
+
 library(tm)
 library(data.table)
 skipWords <- function(x) removeWords(x, c(stopwords('english')))
-                                          #"abil","across","releas","accompani","chang","surprisingly",
-                                          #"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
-                                          #"conjug","capabl","candid","day","alon","basi","account","event","annot",
-                                          #"thought","applic","appli","longer","infer","cohort","assess","certain",
-                                          #"convent","baselin","associ","area","caspas","affect","adjust","adjuv",
-                                          #"ultim","time","dual","cannon","copi","address","anim","aris","capac",
-                                          #"amount","common","administ","adjac","addit","play","indeed","distribut",
-                                          #"presenc","collectively","dure","calcul","childhood","along","additionally",
-                                          #"comprehens","discov","side","within","global","construct","depend","aberr",
-                                          #"accord","safeti","abund","administr","combin","angiogenesi","best","acquir",
-                                          #"activ","allow","specif"))
+#"abil","across","releas","accompani","chang","surprisingly",
+#"accur","achiev","enrich","singl","constitut","almost","among","upon","attenu",
+#"conjug","capabl","candid","day","alon","basi","account","event","annot",
+#"thought","applic","appli","longer","infer","cohort","assess","certain",
+#"convent","baselin","associ","area","caspas","affect","adjust","adjuv",
+#"ultim","time","dual","cannon","copi","address","anim","aris","capac",
+#"amount","common","administ","adjac","addit","play","indeed","distribut",
+#"presenc","collectively","dure","calcul","childhood","along","additionally",
+#"comprehens","discov","side","within","global","construct","depend","aberr",
+#"accord","safeti","abund","administr","combin","angiogenesi","best","acquir",
+#"activ","allow","specif"))
 
 concatenate_and_split_hyphens <- function(x){gsub("\\s(\\w+)-(\\w+)\\s"," \\1\\2 \\1 \\2 ",x)}
 removeAloneNumbers <- function(x){gsub("\\s\\d+\\s","", x)}
@@ -42,7 +43,7 @@ makeDTM_abstract <- function(textVec){
                removeNumbers,
                stemDocument)
   
-  corpus <- tm_map(corpusraw, FUN = tm_reduce, tmFuns = funs)
+  corpus <- tm_map(corpusraw, FUN = tm_reduce, tmFuns = funs,mc.cores=1)
   
   
   ####Added this line to avoid error######
@@ -55,18 +56,22 @@ makeDTM_abstract <- function(textVec){
 }
 
 
-distAuthors <- function(grantPath, SAAbstracts, SADistFile) {
-  sanantonio <- read.xlsx(SAAbstracts,sheetIndex=1)
-  grant.df <- read.xlsx(grantPath,sheetIndex = 1)
 
-  grant.MBC <- grant.df[grant.df$Metastasis_YN == 'yes',]
-  #rm(grant.df)
+SAAbstracts <- "/home/tyu/.synapseCache/253/7330253/SABCS_2008-2012_ABSTRACTS.csv"
+grantPath = "/gluster/home/tyu/.synapseCache/227/9720227/0csv"
+distAuthors <- function(grantPath, SAAbstracts, SADistFile) {
+  sanantonio <- fread(SAAbstracts,data.table=F)
+  grant.df <- fread(grantPath,data.table=F)
+  
+  grant.MBC <- grant.df[grant.df$`Breast Cancer` >= 50,]
+  rm(grant.df)
   text <- paste(grant.MBC$AwardTitle,grant.MBC$TechAbstract)
   textRownames <- paste0("MBC__",grant.MBC$AwardCode)
-  #rm(grant.MBC)
+  rm(grant.MBC)
   sanantoniotext <- paste(sanantonio$title, sanantonio$body1)
-  sanantonioRownames <- sanantonio$control
-  #rm(sanantonio)
+  sanantonioRownames <- as.character(sanantonio$control)
+  
+  rm(sanantonio)
   distances <- lapply(seq_along(text), function(i) {
     final <- c(text[i], sanantoniotext)
     ff <- as.vector(final)
@@ -78,12 +83,15 @@ distAuthors <- function(grantPath, SAAbstracts, SADistFile) {
     row.names(temp) = c(textRownames[i],sanantonioRownames)
     temp <- t(temp)
     temp_cor <- cor(temp)
+    
     paste(sanantonioRownames[order(temp_cor[,1][-1],decreasing = T)[1:20]],collapse=",")
   })
   write.csv(unlist(distances),file=SADistFile)
 }
 
 
+
+
+
 args <- commandArgs(trailingOnly = TRUE)
 SADist <- distAuthors(args[1], args[2], args[3])
-
